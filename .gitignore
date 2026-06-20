@@ -65,3 +65,6 @@ temp/
 
 # Upload temp
 uploads/
+
+#document folder
+docs

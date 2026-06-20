@@ -9,6 +9,163 @@ datasource db {
 
 // ─── ENUMS ────────────────────────────────────────────────────────────────────
 
+enum CurrencyCode {
+  AED
+  AFN
+  ALL
+  AMD
+  ANG
+  AOA
+  ARS
+  AUD
+  AWG
+  AZN
+  BAM
+  BBD
+  BDT
+  BGN
+  BHD
+  BIF
+  BMD
+  BND
+  BOB
+  BRL
+  BSD
+  BTN
+  BWP
+  BYN
+  BZD
+  CAD
+  CDF
+  CHF
+  CLP
+  CNY
+  COP
+  CRC
+  CUP
+  CVE
+  CZK
+  DJF
+  DKK
+  DOP
+  DZD
+  EGP
+  ERN
+  ETB
+  EUR
+  FJD
+  FKP
+  GBP
+  GEL
+  GHS
+  GIP
+  GMD
+  GNF
+  GTQ
+  GYD
+  HKD
+  HNL
+  HTG
+  HUF
+  IDR
+  ILS
+  INR
+  IQD
+  IRR
+  ISK
+  JMD
+  JOD
+  JPY
+  KES
+  KGS
+  KHR
+  KMF
+  KPW
+  KRW
+  KWD
+  KYD
+  KZT
+  LAK
+  LBP
+  LKR
+  LRD
+  LSL
+  LYD
+  MAD
+  MDL
+  MGA
+  MKD
+  MMK
+  MNT
+  MOP
+  MRU
+  MUR
+  MVR
+  MWK
+  MXN
+  MYR
+  MZN
+  NAD
+  NGN
+  NIO
+  NOK
+  NPR
+  NZD
+  OMR
+  PAB
+  PEN
+  PGK
+  PHP
+  PKR
+  PLN
+  PYG
+  QAR
+  RON
+  RSD
+  RUB
+  RWF
+  SAR
+  SBD
+  SCR
+  SDG
+  SEK
+  SGD
+  SHP
+  SLE
+  SOS
+  SRD
+  SSP
+  STN
+  SYP
+  SZL
+  THB
+  TJS
+  TMT
+  TND
+  TOP
+  TRY
+  TTD
+  TWD
+  TZS
+  UAH
+  UGX
+  USD
+  UYU
+  UZS
+  VES
+  VND
+  VUV
+  WST
+  XAF
+  XCD
+  XOF
+  XPF
+  YER
+  ZAR
+  ZMW
+  ZWL
+}
+
 enum EmploymentType {
   FULL_TIME
   PART_TIME
@@ -158,36 +315,40 @@ enum ReminderType {
 // ─── ORGANIZATION ─────────────────────────────────────────────────────────────
 
 model Organization {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   name        String
-  slug        String   @unique
+  slug        String       @unique
   logoUrl     String?
   address     String?
   phone       String?
   email       String?
   website     String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  currency    CurrencyCode @default(INR)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  createdById String?
+  updatedById String?
 
-  departments       Department[]
-  designations      Designation[]
-  employees         Employee[]
-  roles             Role[]
-  leaveTypes        LeavePolicy[]
-  holidays          Holiday[]
-  payrollStructures PayrollStructure[]
-  taxRules          TaxRule[]
-  payrollRuns       PayrollRun[]
-  incentiveRules    IncentiveRule[]
-  greenThanksConfig GreenThanksConfig[]
-  notices           Notice[]
-  assets            Asset[]
-  insurancePolicies InsurancePolicy[]
-  onboardingLinks   OnboardingLink[]
-  chatRooms         ChatRoom[]
-  serviceRequests   ServiceRequest[]
-  performanceCycles PerformanceCycle[]
+  departments        Department[]
+  designations       Designation[]
+  employees          Employee[]
+  roles              Role[]
+  leaveTypes         LeavePolicy[]
+  leavePolicyRules   LeavePolicyRule[]
+  holidays           Holiday[]
+  payrollStructures  PayrollStructure[]
+  taxRules           TaxRule[]
+  payrollRuns        PayrollRun[]
+  incentiveRules     IncentiveRule[]
+  greenThanksConfig  GreenThanksConfig[]
+  notices            Notice[]
+  assets             Asset[]
+  insurancePolicies  InsurancePolicy[]
+  onboardingLinks    OnboardingLink[]
+  chatRooms          ChatRoom[]
+  serviceRequests    ServiceRequest[]
+  performanceCycles  PerformanceCycle[]
 
   @@map("organizations")
 }
@@ -203,6 +364,8 @@ model Role {
   isSystemRole   Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
   userRoles    UserRole[]
@@ -276,13 +439,17 @@ model DeviceToken {
 // ─── ORGANIZATION STRUCTURE ───────────────────────────────────────────────────
 
 model Department {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   organizationId String
   name           String
   parentId       String?
   headEmployeeId String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  hierarchyLevel Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  updatedById    String?
 
   organization Organization  @relation(fields: [organizationId], references: [id])
   parent       Department?   @relation("DepartmentHierarchy", fields: [parentId], references: [id])
@@ -296,31 +463,45 @@ model Department {
 }
 
 model Designation {
-  id             String   @id @default(uuid())
-  organizationId String
-  departmentId   String
-  name           String
-  level          Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String    @id @default(uuid())
+  organizationId     String
+  departmentId       String
+  name               String
+  level              Int       @default(0)
+  payrollStructureId String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+  createdById        String?
+  updatedById        String?
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-  department   Department   @relation(fields: [departmentId], references: [id])
-  employees    Employee[]
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  department       Department        @relation(fields: [departmentId], references: [id])
+  payrollStructure PayrollStructure? @relation("DesignationPayrollStructure", fields: [payrollStructureId], references: [id])
+  employees        Employee[]
 
   @@map("designations")
 }
 
 model TaxRule {
-  id             String   @id @default(uuid())
-  organizationId String
-  name           String
-  type           String
-  config         Json
-  effectiveFrom  DateTime
-  effectiveTo    DateTime?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  id                 String    @id @default(uuid())
+  organizationId     String
+  name               String
+  code               String?
+  type               String
+  calculationType    String    @default("PERCENTAGE")
+  applicableOn       String    @default("GROSS")
+  isStatutory        Boolean   @default(false)
+  config             Json
+  applicabilityRules Json?
+  effectiveFrom      DateTime
+  effectiveTo        DateTime?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+  createdById        String?
+  updatedById        String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -328,16 +509,20 @@ model TaxRule {
 }
 
 model PayrollStructure {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   organizationId String
   name           String
   components     Json
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  updatedById    String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
   employees    Employee[]
+  designations Designation[] @relation("DesignationPayrollStructure")
 
   @@map("payroll_structures")
 }
@@ -371,6 +556,8 @@ model Employee {
   uanNumber         String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+  createdById       String?
+  updatedById       String?
 
   organization     Organization      @relation(fields: [organizationId], references: [id])
   department       Department        @relation(fields: [departmentId], references: [id])
@@ -416,6 +603,7 @@ model OnboardingLink {
   submissionData Json?
   status         String    @default("pending")
   createdAt      DateTime  @default(now())
+  createdById    String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -425,24 +613,31 @@ model OnboardingLink {
 // ─── LEAVE ────────────────────────────────────────────────────────────────────
 
 model LeavePolicy {
-  id                String    @id @default(uuid())
-  organizationId    String
-  name              String
-  leaveType         LeaveType
-  daysPerYear       Float
-  carryForwardMax   Float     @default(0)
-  accrualType       String    @default("monthly")
-  isEncashable      Boolean   @default(false)
-  isLopEligible     Boolean   @default(true)
-  minAdvanceDays    Int       @default(0)
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  organizationId     String
+  name               String
+  leaveType          LeaveType
+  daysPerYear        Float
+  carryForwardMax    Float     @default(0)
+  accrualType        String    @default("monthly")
+  isEncashable       Boolean   @default(false)
+  isLopEligible      Boolean   @default(true)
+  minAdvanceDays     Int       @default(0)
+  maxConsecutiveDays Int?
+  allowedInProbation Boolean   @default(false)
+  genderRestriction  String?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+  createdById        String?
+  updatedById        String?
 
-  organization Organization   @relation(fields: [organizationId], references: [id])
+  organization Organization      @relation(fields: [organizationId], references: [id])
   employees    Employee[]
   balances     LeaveBalance[]
   applications LeaveApplication[]
+  rules        LeavePolicyRule[]
 
   @@map("leave_policies")
 }
@@ -477,11 +672,35 @@ model LeaveApplication {
   rejectionNote String?
   appliedAt     DateTime    @default(now())
   decidedAt     DateTime?
+  createdById   String?
 
   employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   leavePolicy LeavePolicy @relation(fields: [leavePolicyId], references: [id])
 
   @@map("leave_applications")
+}
+
+model LeavePolicyRule {
+  id             String    @id @default(uuid())
+  organizationId String
+  leavePolicyId  String
+  name           String
+  ruleType       String
+  conditionLogic String    @default("AND")
+  conditions     Json
+  action         Json
+  priority       Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  updatedById    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  leavePolicy  LeavePolicy  @relation(fields: [leavePolicyId], references: [id], onDelete: Cascade)
+
+  @@map("leave_policy_rules")
 }
 
 model Holiday {
@@ -491,6 +710,7 @@ model Holiday {
   date           DateTime
   type           String   @default("national")
   createdAt      DateTime @default(now())
+  createdById    String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -517,6 +737,8 @@ model AttendanceLog {
   notes         String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  createdById   String?
+  updatedById   String?
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
@@ -552,6 +774,8 @@ model PayrollRun {
   disbursedAt    DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+  createdById    String?
+  updatedById    String?
 
   organization Organization  @relation(fields: [organizationId], references: [id])
   entries      PayrollEntry[]
@@ -593,6 +817,8 @@ model PayrollEntry {
   status               String   @default("generated")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  createdById          String?
+  updatedById          String?
 
   payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
   employee   Employee   @relation(fields: [employeeId], references: [id])
@@ -617,6 +843,8 @@ model LoanApplication {
   closedAt         DateTime?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
+  createdById      String?
+  updatedById      String?
 
   employee    Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   emiSchedule LoanEmiSchedule[]
@@ -655,6 +883,8 @@ model IncentiveRule {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
   todos        TodoTask[]
@@ -678,6 +908,8 @@ model TodoTask {
   rejectionNote   String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+  createdById     String?
+  updatedById     String?
 
   employee       Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   incentiveRule  IncentiveRule? @relation(fields: [incentiveRuleId], references: [id])
@@ -700,6 +932,7 @@ model IncentiveLedger {
   isReleased      Boolean         @default(false)
   releasedAt      DateTime?
   createdAt       DateTime        @default(now())
+  createdById     String?
 
   employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   todo     TodoTask? @relation(fields: [todoId], references: [id])
@@ -722,6 +955,7 @@ model GreenThanks {
   payrollYear    Int?
   isPaid         Boolean  @default(false)
   createdAt      DateTime @default(now())
+  createdById    String?
 
   fromEmployee Employee @relation("GreenThanksSender", fields: [fromEmployeeId], references: [id])
   toEmployee   Employee @relation("GreenThanksReceiver", fields: [toEmployeeId], references: [id])
@@ -737,6 +971,7 @@ model GreenThanksConfig {
   isPayrollLinked       Boolean  @default(true)
   effectiveFrom         DateTime
   createdAt             DateTime @default(now())
+  createdById           String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -751,9 +986,9 @@ model ChatRoom {
   type           ChatRoomType @default(DIRECT)
   name           String?
   departmentId   String?
-  createdBy      String?
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
+  createdById    String?
 
   organization Organization   @relation(fields: [organizationId], references: [id])
   department   Department?    @relation(fields: [departmentId], references: [id])
@@ -807,10 +1042,11 @@ model Notice {
   scheduledAt    DateTime?
   publishedAt    DateTime?
   expiresAt      DateTime?
-  createdBy      String?
   pushSent       Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  createdById    String?
+  updatedById    String?
 
   organization Organization @relation(fields: [organizationId], references: [id])
   reads        NoticeRead[]
@@ -840,6 +1076,7 @@ model PerformanceCycle {
   status         String   @default("open")
   createdAt      DateTime @default(now())
   closedAt       DateTime?
+  createdById    String?
 
   organization Organization       @relation(fields: [organizationId], references: [id])
   ratings      PerformanceRating[]
@@ -883,6 +1120,8 @@ model ServiceRequest {
   closedAt       DateTime?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
+  createdById    String?
+  updatedById    String?
 
   organization Organization           @relation(fields: [organizationId], references: [id])
   employee     Employee?              @relation(fields: [employeeId], references: [id])
@@ -897,6 +1136,7 @@ model ServiceRequestComment {
   authorId         String?
   content          String   @db.Text
   createdAt        DateTime @default(now())
+  createdById      String?
 
   serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
 
@@ -916,6 +1156,8 @@ model Asset {
   purchaseValue  Float?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  createdById    String?
+  updatedById    String?
 
   organization Organization    @relation(fields: [organizationId], references: [id])
   assignments  AssetAssignment[]
@@ -933,6 +1175,7 @@ model AssetAssignment {
   conditionOnReturn String?
   approvedBy      String?
   notes           String?
+  createdById     String?
 
   asset    Asset    @relation(fields: [assetId], references: [id])
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -951,6 +1194,7 @@ model DisciplinaryMemo {
   issuedAt        DateTime  @default(now())
   acknowledgedAt  DateTime?
   status          String    @default("issued")
+  createdById     String?
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
@@ -972,6 +1216,7 @@ model ExitRecord {
   settlementAmount Float?
   settledAt        DateTime?
   completedAt      DateTime?
+  createdById      String?
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
@@ -992,6 +1237,7 @@ model InsurancePolicy {
   documentUrl    String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
+  createdById    String?
 
   organization      Organization       @relation(fields: [organizationId], references: [id])
   employeeInsurance EmployeeInsurance[]
@@ -1006,6 +1252,7 @@ model EmployeeInsurance {
   enrolledAt       DateTime  @default(now())
   status           String    @default("active")
   familyMembers    Json?
+  createdById      String?
 
   employee Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   policy   InsurancePolicy @relation(fields: [policyId], references: [id])
@@ -1028,6 +1275,7 @@ model Reminder {
   sentAt        DateTime?
   channel       String       @default("push")
   createdAt     DateTime     @default(now())
+  createdById   String?
 
   employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 

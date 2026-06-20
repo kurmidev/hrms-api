@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ClsModule } from 'nestjs-cls';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -9,6 +10,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/roles.guard';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
@@ -19,6 +21,9 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
   imports: [
+    // CLS (Continuation-Local Storage) — provides per-request async context for audit fields
+    ClsModule.forRoot({ global: true, middleware: { mount: true } }),
+
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
@@ -60,9 +65,9 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
     AuthModule,
     RolesModule,
 
+    // Feature modules (M05+)
+    OrganizationsModule,
     // Modules to be added as they are developed
-    // OrganizationsModule,
-    // OrganizationsModule,
     // EmployeesModule,
     // AttendanceModule,
     // LeaveModule,
