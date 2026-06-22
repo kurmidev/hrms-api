@@ -312,6 +312,17 @@ enum ReminderType {
   CUSTOM
 }
 
+enum OnboardingStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  ACTIVATED
+  REJECTED
+  EXPIRED
+}
+
 // ─── ORGANIZATION ─────────────────────────────────────────────────────────────
 
 model Organization {
@@ -394,11 +405,12 @@ model User {
   employeeId     String?   @unique
   email          String
   phone          String?
-  passwordHash   String
-  isActive       Boolean   @default(true)
-  lastLoginAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  passwordHash       String
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   employee     Employee?     @relation(fields: [employeeId], references: [id])
   userRoles    UserRole[]
@@ -552,8 +564,11 @@ model Employee {
   emergencyContact  Json?
   documents         Json?
   pfNumber          String?
-  esiNumber          String?
+  esiNumber         String?
   uanNumber         String?
+  address           Json?
+  profilePhotoUrl   String?
+  deletedAt         DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   createdById       String?
@@ -587,27 +602,55 @@ model Employee {
   exitRecord        ExitRecord?
   employeeInsurance EmployeeInsurance[]
   reminders         Reminder[]
+  onboardingLink    OnboardingLink?
 
   @@unique([organizationId, empCode])
   @@map("employees")
 }
 
 model OnboardingLink {
-  id             String    @id @default(uuid())
+  id             String           @id @default(uuid())
   organizationId String
-  token          String    @unique
+  token          String           @unique
   email          String
   phone          String
+  candidateName  String?
   expiresAt      DateTime
   usedAt         DateTime?
   submissionData Json?
-  status         String    @default("pending")
-  createdAt      DateTime  @default(now())
+  status         OnboardingStatus @default(PENDING)
+  hrNotes        String?          @db.Text
+  reviewedById   String?
+  reviewedAt     DateTime?
+  activatedById  String?
+  activatedAt    DateTime?
+  employeeId     String?          @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   createdById    String?
+  updatedById    String?
 
-  organization Organization @relation(fields: [organizationId], references: [id])
+  organization Organization          @relation(fields: [organizationId], references: [id])
+  employee     Employee?             @relation(fields: [employeeId], references: [id])
+  transitions  OnboardingTransition[]
 
   @@map("onboarding_links")
+}
+
+model OnboardingTransition {
+  id               String           @id @default(uuid())
+  onboardingLinkId String
+  fromStatus       OnboardingStatus
+  toStatus         OnboardingStatus
+  actorId          String?
+  actorType        String           @default("HR")
+  notes            String?          @db.Text
+  occurredAt       DateTime         @default(now())
+
+  onboardingLink OnboardingLink @relation(fields: [onboardingLinkId], references: [id], onDelete: Cascade)
+
+  @@index([onboardingLinkId, occurredAt])
+  @@map("onboarding_transitions")
 }
 
 // ─── LEAVE ────────────────────────────────────────────────────────────────────

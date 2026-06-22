@@ -11,6 +11,9 @@ import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { FilesModule } from './modules/files/files.module';
+import { EmployeesModule } from './modules/employees/employees.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/roles.guard';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
@@ -67,8 +70,10 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
     // Feature modules (M05+)
     OrganizationsModule,
+    NotificationsModule,
+    FilesModule,
+    EmployeesModule,
     // Modules to be added as they are developed
-    // EmployeesModule,
     // AttendanceModule,
     // LeaveModule,
     // PayrollModule,

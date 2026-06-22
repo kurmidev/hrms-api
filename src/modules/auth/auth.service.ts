@@ -256,7 +256,7 @@ export class AuthService {
     if (!match) throw new UnauthorizedException('Current password is incorrect');
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: false } });
     await this.redis.deleteRefreshToken(userId);
 
     return { changed: true, message: 'Password changed successfully. Please log in again.' };
