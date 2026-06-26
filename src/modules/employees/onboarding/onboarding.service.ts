@@ -25,9 +25,16 @@ interface SubmissionDetails {
   lastName: string;
   dateOfBirth?: string;
   gender?: string;
+  nationality?: string;
+  phone?: string;
   personalEmail?: string;
+  bloodGroup?: string;
+  existingHealthIssues?: string;
   address?: object;
   emergencyContact?: object;
+  previousEmployment?: object;
+  referenceContacts?: object[];
+  declarationAccepted: boolean;
   bankName: string;
   accountNumber: string;
   ifscCode: string;
@@ -65,6 +72,11 @@ export class OnboardingService {
           candidateName: dto.candidateName ?? null,
           expiresAt,
           status: OnboardingStatus.PENDING,
+          jobTitle: dto.jobTitle ?? null,
+          departmentName: dto.departmentName ?? null,
+          workLocation: dto.workLocation ?? null,
+          prefillJoiningDate: dto.prefillJoiningDate ? new Date(dto.prefillJoiningDate) : null,
+          prefillEmploymentType: dto.prefillEmploymentType ?? null,
           createdById: hrUserId,
         },
       });
@@ -210,6 +222,14 @@ export class OnboardingService {
           gender: details.gender ?? null,
           phone: link.phone,
           email: link.email,
+          nationality: details.nationality ?? null,
+          workLocation: link.workLocation ?? null,
+          bloodGroup: details.bloodGroup ?? null,
+          healthInfo: details.existingHealthIssues
+            ? ({ existingConditions: details.existingHealthIssues } as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          previousEmployment: details.previousEmployment as Prisma.InputJsonValue ?? Prisma.JsonNull,
+          referenceContacts: details.referenceContacts as Prisma.InputJsonValue ?? Prisma.JsonNull,
           address: details.address as Prisma.InputJsonValue ?? Prisma.JsonNull,
           emergencyContact: details.emergencyContact as Prisma.InputJsonValue ?? Prisma.JsonNull,
           bankDetails: {
@@ -313,6 +333,13 @@ export class OnboardingService {
       candidateName: link.candidateName,
       expiresAt: link.expiresAt,
       hrNotes: link.hrNotes,
+      jobContext: {
+        jobTitle: link.jobTitle,
+        departmentName: link.departmentName,
+        workLocation: link.workLocation,
+        joiningDate: link.prefillJoiningDate,
+        employmentType: link.prefillEmploymentType,
+      },
       submissionData: link.submissionData ?? { completedSteps: [] },
     };
   }
@@ -334,9 +361,16 @@ export class OnboardingService {
         lastName: dto.lastName,
         dateOfBirth: dto.dateOfBirth,
         gender: dto.gender,
+        nationality: dto.nationality,
+        phone: dto.phone,
         personalEmail: dto.personalEmail,
+        bloodGroup: dto.bloodGroup,
+        existingHealthIssues: dto.existingHealthIssues,
         address: dto.address as object,
         emergencyContact: dto.emergencyContact as object,
+        previousEmployment: dto.previousEmployment as object,
+        referenceContacts: dto.referenceContacts as object[],
+        declarationAccepted: dto.declarationAccepted,
         bankName: dto.bankName,
         accountNumber: dto.accountNumber,
         ifscCode: dto.ifscCode,

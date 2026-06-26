@@ -568,6 +568,12 @@ model Employee {
   uanNumber         String?
   address           Json?
   profilePhotoUrl   String?
+  nationality       String?
+  workLocation      String?
+  bloodGroup        String?
+  healthInfo        Json?
+  previousEmployment Json?
+  referenceContacts Json?
   deletedAt         DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -625,6 +631,11 @@ model OnboardingLink {
   activatedById  String?
   activatedAt    DateTime?
   employeeId     String?          @unique
+  jobTitle              String?
+  departmentName        String?
+  workLocation          String?
+  prefillJoiningDate    DateTime?
+  prefillEmploymentType String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   createdById    String?

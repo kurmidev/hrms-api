@@ -67,7 +67,14 @@ export class OnboardingPublicController {
       type: 'object',
       properties: {
         files: { type: 'array', items: { type: 'string', format: 'binary' } },
-        documentTypes: { type: 'array', items: { type: 'string' }, description: 'Parallel array of document type labels (e.g. AADHAAR, PAN)' },
+        documentTypes: {
+          type: 'array',
+          items: {
+            type: 'string',
+            description: 'Predefined types: AADHAAR, PAN, RESUME, OFFER_LETTER, BANK_PROOF, PHOTO, EDUCATION_CERTIFICATE, EXPERIENCE_CERTIFICATE, BLOOD_GROUP_REPORT',
+          },
+          description: 'Parallel array of document type labels matching the uploaded files',
+        },
         finalSubmit: { type: 'string', enum: ['true', 'false'], description: 'Set to true to finalise submission' },
       },
     },
