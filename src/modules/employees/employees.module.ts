@@ -9,10 +9,12 @@ import { OnboardingPublicController } from './onboarding/onboarding-public.contr
 import { OnboardingService } from './onboarding/onboarding.service';
 import { OnboardingScheduler } from './onboarding/onboarding.scheduler';
 import { OnboardingProcessor } from './jobs/onboarding.processor';
+import { EmployeesProcessor } from './jobs/employees.processor';
 
 @Module({
   imports: [
     BullModule.registerQueue({ name: 'onboarding' }),
+    BullModule.registerQueue({ name: 'employees' }),
     MulterModule.register({ storage: memoryStorage() }),
   ],
   controllers: [
@@ -25,6 +27,7 @@ import { OnboardingProcessor } from './jobs/onboarding.processor';
     OnboardingService,
     OnboardingScheduler,
     OnboardingProcessor,
+    EmployeesProcessor,
   ],
   exports: [EmployeesService, OnboardingService],
 })

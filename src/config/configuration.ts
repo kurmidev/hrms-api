@@ -39,6 +39,8 @@ export default () => ({
     privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   },
 
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+
   throttle: {
     ttl: parseInt(process.env.THROTTLE_TTL, 10) || 60,
     limit: parseInt(process.env.THROTTLE_LIMIT, 10) || 100,

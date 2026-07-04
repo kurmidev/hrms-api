@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { totp } from 'otplib';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,7 @@ export class AuthService {
     private readonly redis: RedisService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly notifications: NotificationsService,
   ) {
     totp.options = { step: 300, digits: 6 };
   }
@@ -249,7 +251,10 @@ export class AuthService {
   // ── Change password ───────────────────────────────────────────────────────
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { employee: { select: { firstName: true } } },
+    });
     if (!user) throw new NotFoundException('User not found');
 
     const match = await bcrypt.compare(currentPassword, user.passwordHash);
@@ -259,7 +264,33 @@ export class AuthService {
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: false } });
     await this.redis.deleteRefreshToken(userId);
 
+    this.sendPasswordChangedEmail(user.email, user.employee?.firstName ?? 'there').catch(() => {});
+
     return { changed: true, message: 'Password changed successfully. Please log in again.' };
+  }
+
+  // ── Reset password via admin-issued token ─────────────────────────────────
+
+  async resetPassword(token: string, newPassword: string) {
+    const userId = await this.redis.get(`pwd-reset:${token}`);
+    if (!userId) throw new BadRequestException('Password reset link is invalid or has expired');
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { employee: { select: { firstName: true } } },
+    });
+    if (!user) throw new NotFoundException('User account not found');
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await Promise.all([
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: false } }),
+      this.redis.del(`pwd-reset:${token}`),
+      this.redis.deleteRefreshToken(userId),
+    ]);
+
+    this.sendPasswordChangedEmail(user.email, user.employee?.firstName ?? 'there').catch(() => {});
+
+    return { reset: true, message: 'Password reset successfully. You can now log in with your new password.' };
   }
 
   // ── Session management ────────────────────────────────────────────────────
@@ -319,6 +350,18 @@ export class AuthService {
     ]);
 
     return { accessToken, refreshToken, expiresIn };
+  }
+
+  private async sendPasswordChangedEmail(email: string, firstName: string) {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Changed Successfully</h2>
+        <p>Hi ${firstName},</p>
+        <p>Your HRMS account password has been changed successfully.</p>
+        <p>If you did not make this change, please contact HR immediately to secure your account.</p>
+      </div>
+    `;
+    await this.notifications.sendEmail(email, 'HRMS Password Changed', html);
   }
 
   private async dispatchSms(phone: string, message: string) {
