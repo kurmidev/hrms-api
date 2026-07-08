@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -74,6 +75,24 @@ export class EmployeesService {
     if (!designation) throw new BadRequestException(`Designation ${dto.designationId} not found in this organization`);
     if (!manager) throw new BadRequestException(`Reporting manager ${dto.reportingManagerId} not found in this organization`);
 
+    // Check subscription employee limit
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: { subscription: { include: { plan: true } } },
+    });
+    if (org?.subscription?.plan && org.subscription.plan.maxEmployees !== -1) {
+      const empCount = await this.prisma.employee.count({
+        where: { organizationId, deletedAt: null },
+      });
+      if (empCount >= org.subscription.plan.maxEmployees) {
+        throw new ForbiddenException({
+          code: 'EMPLOYEE_LIMIT_REACHED',
+          limit: org.subscription.plan.maxEmployees,
+          message: `Employee limit of ${org.subscription.plan.maxEmployees} reached. Please upgrade your plan.`,
+        });
+      }
+    }
+
     const empCode = await resolveEmpCode(this.prisma, organizationId, dto.empCode);
 
     const digits = Math.floor(1000 + Math.random() * 9000);
@@ -135,6 +154,45 @@ export class EmployeesService {
     });
 
     return employee;
+  }
+
+  async getStats(organizationId: string) {
+    const where = { organizationId, deletedAt: null };
+    const [total, statusGroups, typeGroups, deptGroups] = await Promise.all([
+      this.prisma.employee.count({ where }),
+      this.prisma.employee.groupBy({
+        by: ['status'],
+        where,
+        _count: { status: true },
+      }),
+      this.prisma.employee.groupBy({
+        by: ['employmentType'],
+        where,
+        _count: { employmentType: true },
+      }),
+      this.prisma.department.findMany({
+        where: { organizationId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { employees: { where: { deletedAt: null } } } },
+        },
+      }),
+    ]);
+
+    const byStatus: Record<string, number> = {};
+    for (const g of statusGroups) byStatus[g.status] = g._count.status;
+
+    const byType: Record<string, number> = {};
+    for (const g of typeGroups) byType[g.employmentType] = g._count.employmentType;
+
+    const byDepartment = deptGroups.map((d) => ({
+      id: d.id,
+      name: d.name,
+      count: d._count.employees,
+    }));
+
+    return { total, byStatus, byType, byDepartment };
   }
 
   async findAll(organizationId: string, query: EmployeeQueryDto) {

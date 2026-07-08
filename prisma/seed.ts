@@ -173,6 +173,62 @@ const SYSTEM_ROLES = [
   },
 ];
 
+async function seedSubscriptionPlans(prisma: PrismaClient) {
+  const plans = [
+    {
+      name: 'Starter',
+      maxEmployees: 50,
+      priceMonthly: 999,
+      priceQuarterly: 2699,
+      priceYearly: 9999,
+      features: ['Up to 50 employees', 'Basic HR features', 'Leave management', 'Attendance tracking'],
+      sortOrder: 1,
+    },
+    {
+      name: 'Growth',
+      maxEmployees: 200,
+      priceMonthly: 2999,
+      priceQuarterly: 7999,
+      priceYearly: 29999,
+      features: ['Up to 200 employees', 'All Starter features', 'Payroll management', 'Performance reviews', 'Advanced reports'],
+      sortOrder: 2,
+    },
+    {
+      name: 'Enterprise',
+      maxEmployees: -1,
+      priceMonthly: 7999,
+      priceQuarterly: 21999,
+      priceYearly: 79999,
+      features: ['Unlimited employees', 'All Growth features', 'Custom roles', 'API access', 'Priority support'],
+      sortOrder: 3,
+    },
+  ];
+
+  for (const plan of plans) {
+    await prisma.subscriptionPlan.upsert({
+      where: { name: plan.name },
+      update: {},
+      create: { ...plan, features: plan.features as any },
+    });
+  }
+  console.log('Subscription plans seeded');
+}
+
+async function seedPlatformAdmin(prisma: PrismaClient) {
+  const hash = await bcrypt.hash('SuperAdmin@1234', 10);
+  await prisma.platformAdmin.upsert({
+    where: { email: 'superadmin@platform.com' },
+    update: {},
+    create: {
+      email: 'superadmin@platform.com',
+      name: 'Super Admin',
+      passwordHash: hash,
+      isActive: true,
+    },
+  });
+  console.log('Platform admin seeded');
+}
+
 async function main() {
   console.log('Seeding database...');
 
@@ -247,8 +303,12 @@ async function main() {
     console.log(`  Assigned super_admin role to ${adminUser.email}`);
   }
 
+  await seedSubscriptionPlans(prisma);
+  await seedPlatformAdmin(prisma);
+
   console.log('\nSeed complete.');
   console.log('Default login: admin@igreentec.in / Admin@1234');
+  console.log('Platform admin: superadmin@platform.com / SuperAdmin@1234');
 }
 
 main()

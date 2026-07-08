@@ -17,6 +17,11 @@ import { EmployeesModule } from './modules/employees/employees.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/roles.guard';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
+import { PlatformAuthModule } from './modules/platform-auth/platform-auth.module';
+import { SubscriptionPlansModule } from './modules/subscription-plans/subscription-plans.module';
+import { PlatformOrganizationsModule } from './modules/platform-organizations/platform-organizations.module';
+import { InvoicesModule } from './modules/invoices/invoices.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   providers: [
@@ -73,6 +78,11 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
     NotificationsModule,
     FilesModule,
     EmployeesModule,
+    PlatformAuthModule,
+    SubscriptionPlansModule,
+    PlatformOrganizationsModule,
+    InvoicesModule,
+    DashboardModule,
     // Modules to be added as they are developed
     // AttendanceModule,
     // LeaveModule,

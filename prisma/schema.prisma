@@ -360,6 +360,9 @@ model Organization {
   chatRooms          ChatRoom[]
   serviceRequests    ServiceRequest[]
   performanceCycles  PerformanceCycle[]
+  subscription       OrganizationSubscription?
+  invoices           Invoice[]
+  dashboardConfigs   DashboardConfig[]
 
   @@map("organizations")
 }
@@ -412,10 +415,11 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  employee     Employee?     @relation(fields: [employeeId], references: [id])
-  userRoles    UserRole[]
-  loginHistory LoginHistory[]
-  deviceTokens DeviceToken[]
+  employee         Employee?         @relation(fields: [employeeId], references: [id])
+  userRoles        UserRole[]
+  loginHistory     LoginHistory[]
+  deviceTokens     DeviceToken[]
+  dashboardConfigs DashboardConfig[]
 
   @@unique([organizationId, email])
   @@map("users")
@@ -1334,6 +1338,163 @@ model Reminder {
   employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("reminders")
+}
+
+// ─── SAAS BILLING ─────────────────────────────────────────────────────────────
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+model PlatformAdmin {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("platform_admins")
+}
+
+model SubscriptionPlan {
+  id             String    @id @default(uuid())
+  name           String    @unique
+  description    String?
+  maxEmployees   Int
+  priceMonthly   Decimal   @db.Decimal(10, 2)
+  priceQuarterly Decimal   @db.Decimal(10, 2)
+  priceYearly    Decimal   @db.Decimal(10, 2)
+  features       Json      @default("[]")
+  isActive       Boolean   @default(true)
+  sortOrder      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  subscriptions OrganizationSubscription[]
+
+  @@map("subscription_plans")
+}
+
+model OrganizationSubscription {
+  id                 String             @id @default(uuid())
+  organizationId     String             @unique
+  planId             String
+  billingCycle       BillingCycle
+  status             SubscriptionStatus @default(ACTIVE)
+  gracePeriodDays    Int                @default(7)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  nextBillingDate    DateTime
+  cancelledAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  plan         SubscriptionPlan @relation(fields: [planId], references: [id])
+  invoices     Invoice[]
+
+  @@map("organization_subscriptions")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  invoiceNumber  String        @unique
+  organizationId String
+  subscriptionId String
+  amount         Decimal       @db.Decimal(10, 2)
+  taxPercent     Decimal       @default(18) @db.Decimal(5, 2)
+  taxAmount      Decimal       @db.Decimal(10, 2)
+  totalAmount    Decimal       @db.Decimal(10, 2)
+  currency       String        @default("INR")
+  status         InvoiceStatus @default(SENT)
+  dueDate        DateTime
+  paidAt         DateTime?
+  periodStart    DateTime
+  periodEnd      DateTime
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization             @relation(fields: [organizationId], references: [id])
+  subscription OrganizationSubscription @relation(fields: [subscriptionId], references: [id])
+  payments     Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  organizationId  String
+  amount          Decimal  @db.Decimal(10, 2)
+  paymentDate     DateTime
+  paymentMethod   String
+  referenceNumber String?
+  notes           String?  @db.Text
+  recordedById    String
+  createdAt       DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
+}
+
+// ─── DASHBOARDS ───────────────────────────────────────────────────────────────
+
+model DashboardConfig {
+  id             String           @id @default(cuid())
+  organizationId String
+  roleName       String?
+  userId         String?
+  name           String
+  isDefault      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  createdById    String?
+  updatedById    String?
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  user         User?             @relation(fields: [userId], references: [id])
+  widgets      DashboardWidget[]
+
+  @@index([organizationId, roleName])
+  @@index([organizationId, userId])
+  @@map("dashboard_configs")
+}
+
+model DashboardWidget {
+  id          String          @id @default(cuid())
+  dashboardId String
+  widgetType  String
+  title       String
+  position    Int
+  colSpan     Int             @default(1)
+  rowSpan     Int             @default(1)
+  config      Json            @default("{}")
+
+  dashboard DashboardConfig @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  @@map("dashboard_widgets")
 }
 
 // ─── AUDIT LOGS ───────────────────────────────────────────────────────────────

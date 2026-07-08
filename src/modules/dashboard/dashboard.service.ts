@@ -1,0 +1,248 @@
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '@prisma/prisma.service';
+import { CreateDashboardDto } from './dto/create-dashboard.dto';
+import { UpdateDashboardDto } from './dto/update-dashboard.dto';
+
+interface DefaultWidget {
+  widgetType: string;
+  title: string;
+  position: number;
+  colSpan: number;
+}
+
+interface DefaultDashboard {
+  name: string;
+  roleName: string;
+  widgets: DefaultWidget[];
+}
+
+const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
+  {
+    name: 'Admin Dashboard',
+    roleName: 'org_admin',
+    widgets: [
+      { widgetType: 'kpi_total_employees', title: 'Total Employees', position: 0, colSpan: 1 },
+      { widgetType: 'kpi_active_employees', title: 'Active Employees', position: 1, colSpan: 1 },
+      { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
+      { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
+      { widgetType: 'chart_employee_status', title: 'Employee Status', position: 4, colSpan: 2 },
+      { widgetType: 'chart_department_headcount', title: 'Dept Headcount', position: 5, colSpan: 2 },
+      { widgetType: 'table_recent_joiners', title: 'Recent Joiners', position: 6, colSpan: 2 },
+      { widgetType: 'activity_recent', title: 'Recent Activity', position: 7, colSpan: 2 },
+    ],
+  },
+  {
+    name: 'Super Admin Dashboard',
+    roleName: 'super_admin',
+    widgets: [
+      { widgetType: 'kpi_total_employees', title: 'Total Employees', position: 0, colSpan: 1 },
+      { widgetType: 'kpi_active_employees', title: 'Active Employees', position: 1, colSpan: 1 },
+      { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
+      { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
+      { widgetType: 'chart_employee_status', title: 'Employee Status', position: 4, colSpan: 2 },
+      { widgetType: 'chart_department_headcount', title: 'Dept Headcount', position: 5, colSpan: 2 },
+      { widgetType: 'table_recent_joiners', title: 'Recent Joiners', position: 6, colSpan: 2 },
+      { widgetType: 'activity_recent', title: 'Recent Activity', position: 7, colSpan: 2 },
+    ],
+  },
+  {
+    name: 'HR Manager Dashboard',
+    roleName: 'hr_manager',
+    widgets: [
+      { widgetType: 'kpi_total_employees', title: 'Total Employees', position: 0, colSpan: 1 },
+      { widgetType: 'kpi_active_employees', title: 'Active Employees', position: 1, colSpan: 1 },
+      { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
+      { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
+      { widgetType: 'chart_employee_status', title: 'Employee Status', position: 4, colSpan: 2 },
+      { widgetType: 'chart_department_headcount', title: 'Dept Headcount', position: 5, colSpan: 2 },
+      { widgetType: 'table_recent_joiners', title: 'Recent Joiners', position: 6, colSpan: 2 },
+      { widgetType: 'activity_recent', title: 'Recent Activity', position: 7, colSpan: 2 },
+    ],
+  },
+  {
+    name: 'Finance Manager Dashboard',
+    roleName: 'finance_manager',
+    widgets: [
+      { widgetType: 'kpi_payroll_total', title: 'Payroll Total', position: 0, colSpan: 2 },
+      { widgetType: 'kpi_open_loans', title: 'Open Loans', position: 1, colSpan: 1 },
+      { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 2, colSpan: 1 },
+      { widgetType: 'chart_payroll_trend', title: 'Payroll Trend', position: 3, colSpan: 4 },
+      { widgetType: 'table_pending_loans', title: 'Pending Loans', position: 4, colSpan: 4 },
+    ],
+  },
+  {
+    name: 'Department Manager Dashboard',
+    roleName: 'dept_manager',
+    widgets: [
+      { widgetType: 'kpi_active_employees', title: 'Active Employees', position: 0, colSpan: 1 },
+      { widgetType: 'kpi_on_leave', title: 'On Leave', position: 1, colSpan: 1 },
+      { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
+      { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
+      { widgetType: 'chart_attendance_bar', title: 'Attendance', position: 4, colSpan: 2 },
+      { widgetType: 'table_pending_leaves', title: 'Pending Leaves', position: 5, colSpan: 2 },
+      { widgetType: 'table_late_arrivals', title: 'Late Arrivals', position: 6, colSpan: 4 },
+    ],
+  },
+  {
+    name: 'Field Supervisor Dashboard',
+    roleName: 'field_supervisor',
+    widgets: [
+      { widgetType: 'kpi_active_employees', title: 'Active Employees', position: 0, colSpan: 1 },
+      { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 1, colSpan: 1 },
+      { widgetType: 'chart_attendance_bar', title: 'Attendance', position: 2, colSpan: 2 },
+      { widgetType: 'table_late_arrivals', title: 'Late Arrivals', position: 3, colSpan: 4 },
+    ],
+  },
+  {
+    name: 'Employee Dashboard',
+    roleName: 'employee',
+    widgets: [
+      { widgetType: 'clock_checkin', title: 'Check In/Out', position: 0, colSpan: 2 },
+      { widgetType: 'kpi_my_leave_balance', title: 'My Leave Balance', position: 1, colSpan: 1 },
+      { widgetType: 'kpi_my_performance', title: 'My Performance', position: 2, colSpan: 1 },
+      { widgetType: 'schedule_upcoming', title: 'Upcoming Schedule', position: 3, colSpan: 2 },
+    ],
+  },
+  {
+    name: 'IT Admin Dashboard',
+    roleName: 'it_admin',
+    widgets: [
+      { widgetType: 'kpi_open_assets', title: 'Open Assets', position: 0, colSpan: 1 },
+      { widgetType: 'kpi_open_tickets', title: 'Open Tickets', position: 1, colSpan: 1 },
+      { widgetType: 'kpi_total_employees', title: 'Total Employees', position: 2, colSpan: 1 },
+      { widgetType: 'kpi_active_employees', title: 'Active Employees', position: 3, colSpan: 1 },
+      { widgetType: 'table_pending_loans', title: 'Pending Loans', position: 4, colSpan: 4 },
+    ],
+  },
+];
+
+@Injectable()
+export class DashboardService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findForUser(userId: string, organizationId: string, roleName: string) {
+    return this.prisma.dashboardConfig.findMany({
+      where: {
+        organizationId,
+        OR: [
+          { userId },
+          { isDefault: true, roleName },
+        ],
+      },
+      include: {
+        widgets: { orderBy: { position: 'asc' } },
+      },
+    });
+  }
+
+  async findDefaults(organizationId: string) {
+    return this.prisma.dashboardConfig.findMany({
+      where: { organizationId, isDefault: true },
+      include: { widgets: { orderBy: { position: 'asc' } } },
+    });
+  }
+
+  async create(dto: CreateDashboardDto, userId: string, organizationId: string) {
+    return this.prisma.dashboardConfig.create({
+      data: {
+        organizationId,
+        userId,
+        name: dto.name,
+        isDefault: dto.isDefault ?? false,
+        roleName: dto.roleName,
+        widgets: dto.widgets
+          ? {
+              create: dto.widgets.map((w) => ({
+                widgetType: w.widgetType,
+                title: w.title,
+                position: w.position,
+                colSpan: w.colSpan ?? 1,
+                rowSpan: w.rowSpan ?? 1,
+                config: w.config ?? {},
+              })),
+            }
+          : undefined,
+      },
+      include: { widgets: { orderBy: { position: 'asc' } } },
+    });
+  }
+
+  async update(id: string, dto: UpdateDashboardDto, userId: string, organizationId: string) {
+    const dashboard = await this.prisma.dashboardConfig.findUnique({ where: { id } });
+    if (!dashboard) throw new NotFoundException(`Dashboard ${id} not found`);
+    if (dashboard.organizationId !== organizationId) throw new ForbiddenException();
+    if (dashboard.userId && dashboard.userId !== userId) throw new ForbiddenException();
+
+    // Delete old widgets and recreate
+    if (dto.widgets) {
+      await this.prisma.dashboardWidget.deleteMany({ where: { dashboardId: id } });
+    }
+
+    return this.prisma.dashboardConfig.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.isDefault !== undefined && { isDefault: dto.isDefault }),
+        ...(dto.widgets && {
+          widgets: {
+            create: dto.widgets.map((w) => ({
+              widgetType: w.widgetType,
+              title: w.title,
+              position: w.position,
+              colSpan: w.colSpan ?? 1,
+              rowSpan: w.rowSpan ?? 1,
+              config: w.config ?? {},
+            })),
+          },
+        }),
+      },
+      include: { widgets: { orderBy: { position: 'asc' } } },
+    });
+  }
+
+  async delete(id: string, userId: string, organizationId: string) {
+    const dashboard = await this.prisma.dashboardConfig.findUnique({ where: { id } });
+    if (!dashboard) throw new NotFoundException(`Dashboard ${id} not found`);
+    if (dashboard.organizationId !== organizationId) throw new ForbiddenException();
+    if (dashboard.userId && dashboard.userId !== userId) throw new ForbiddenException();
+
+    await this.prisma.dashboardConfig.delete({ where: { id } });
+    return { message: 'Dashboard deleted' };
+  }
+
+  async seedDefaults(organizationId: string) {
+    const results: any[] = [];
+
+    for (const def of DEFAULT_DASHBOARDS) {
+      const existing = await this.prisma.dashboardConfig.findFirst({
+        where: { organizationId, roleName: def.roleName, isDefault: true },
+      });
+
+      if (existing) {
+        results.push({ roleName: def.roleName, status: 'already_exists' });
+        continue;
+      }
+
+      const created = await this.prisma.dashboardConfig.create({
+        data: {
+          organizationId,
+          name: def.name,
+          roleName: def.roleName,
+          isDefault: true,
+          widgets: {
+            create: def.widgets.map((w) => ({
+              widgetType: w.widgetType,
+              title: w.title,
+              position: w.position,
+              colSpan: w.colSpan,
+            })),
+          },
+        },
+      });
+
+      results.push({ roleName: def.roleName, status: 'created', id: created.id });
+    }
+
+    return results;
+  }
+}

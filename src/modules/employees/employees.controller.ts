@@ -43,6 +43,13 @@ import { UploadDocumentDto } from './dto/upload-document.dto';
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
+  @Get('stats')
+  @RequirePermissions('employee:read')
+  @ApiOperation({ summary: 'Employee aggregate stats (no pagination)' })
+  getStats(@CurrentUser('organizationId') organizationId: string) {
+    return this.employeesService.getStats(organizationId);
+  }
+
   @Get('trash')
   @RequirePermissions('employee:read')
   @ApiOperation({ summary: 'List soft-deleted employees' })

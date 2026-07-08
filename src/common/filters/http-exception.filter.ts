@@ -27,14 +27,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Internal server error';
 
-    const errorResponse = {
-      statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      method: request.method,
-      error: typeof message === 'string' ? message : (message as any).message,
-    };
-
     if (status >= 500) {
       this.logger.error(
         `${request.method} ${request.url}`,
@@ -42,6 +34,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).json(errorResponse);
+    response.status(status).json({
+      status: false,
+      message: typeof message === 'string'
+        ? message
+        : ((message as any)?.message ?? (message as any)?.error ?? 'An error occurred'),
+      data: {
+        statusCode: status,
+        path: request.url,
+        method: request.method,
+        details: typeof message === 'object' ? message : undefined,
+      },
+    });
   }
 }
