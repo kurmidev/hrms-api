@@ -64,7 +64,8 @@ export class EmployeesController {
   @RequirePermissions('employee:create')
   @ApiOperation({
     summary: 'Create employee directly (bypasses onboarding)',
-    description: 'Validates dept/designation/manager, creates Employee + User in a single transaction with temp password, and sends onboarding invite email.',
+    description:
+      'Validates dept/designation/manager, creates Employee + User in a single transaction with temp password, and sends onboarding invite email.',
   })
   create(
     @CurrentUser('organizationId') organizationId: string,
@@ -76,22 +77,23 @@ export class EmployeesController {
 
   @Get()
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'List employees', description: 'Paginated. Filter by ?status=ACTIVE&departmentId=...&employmentType=FULL_TIME' })
-  findAll(
-    @CurrentUser('organizationId') organizationId: string,
-    @Query() query: EmployeeQueryDto,
-  ) {
+  @ApiOperation({
+    summary: 'List employees',
+    description: 'Paginated. Filter by ?status=ACTIVE&departmentId=...&employmentType=FULL_TIME',
+  })
+  findAll(@CurrentUser('organizationId') organizationId: string, @Query() query: EmployeeQueryDto) {
     return this.employeesService.findAll(organizationId, query);
   }
 
   @Get(':id')
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'Get employee full profile', description: 'Includes department, designation, reporting manager, payroll structure, leave policy, and user account info.' })
+  @ApiOperation({
+    summary: 'Get employee full profile',
+    description:
+      'Includes department, designation, reporting manager, payroll structure, leave policy, and user account info.',
+  })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
-  findOne(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.employeesService.findOne(organizationId, id);
   }
 
@@ -113,7 +115,8 @@ export class EmployeesController {
   @RequirePermissions('employee:update')
   @ApiOperation({
     summary: 'Change employee status',
-    description: 'Valid transitions: PRE_BOARDING→ACTIVE/EXITED, ACTIVE→ON_LEAVE/SUSPENDED/EXITED. A reason is required when transitioning to SUSPENDED or EXITED. Sending ACTIVE triggers a welcome email.',
+    description:
+      'Valid transitions: PRE_BOARDING→ACTIVE/EXITED, ACTIVE→ON_LEAVE/SUSPENDED/EXITED. A reason is required when transitioning to SUSPENDED or EXITED. Sending ACTIVE triggers a welcome email.',
   })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   patchStatus(
@@ -158,7 +161,10 @@ export class EmployeesController {
   @RequirePermissions('employee:update')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload an identity or HR document to MinIO', description: 'Adds the document entry to the employee\'s documents JSON array.' })
+  @ApiOperation({
+    summary: 'Upload an identity or HR document to MinIO',
+    description: "Adds the document entry to the employee's documents JSON array.",
+  })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   @ApiBody({
     schema: {
@@ -166,7 +172,21 @@ export class EmployeesController {
       required: ['file', 'documentType'],
       properties: {
         file: { type: 'string', format: 'binary' },
-        documentType: { type: 'string', enum: ['AADHAAR', 'PAN', 'PASSPORT', 'DRIVING_LICENCE', 'VOTER_ID', 'DEGREE', 'RESUME', 'OFFER_LETTER', 'EXPERIENCE_LETTER', 'OTHER'] },
+        documentType: {
+          type: 'string',
+          enum: [
+            'AADHAAR',
+            'PAN',
+            'PASSPORT',
+            'DRIVING_LICENCE',
+            'VOTER_ID',
+            'DEGREE',
+            'RESUME',
+            'OFFER_LETTER',
+            'EXPERIENCE_LETTER',
+            'OTHER',
+          ],
+        },
         notes: { type: 'string' },
       },
     },
@@ -186,7 +206,10 @@ export class EmployeesController {
   @RequirePermissions('employee:update')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload employee profile photo to MinIO', description: 'Replaces any existing profile photo. Old file is deleted from storage.' })
+  @ApiOperation({
+    summary: 'Upload employee profile photo to MinIO',
+    description: 'Replaces any existing profile photo. Old file is deleted from storage.',
+  })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   @ApiBody({
     schema: {
@@ -238,9 +261,19 @@ export class EmployeesController {
 
   @Get(':id/subordinates')
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'Get subordinate tree', description: 'Returns a nested tree of all direct and indirect reports up to the specified depth.' })
+  @ApiOperation({
+    summary: 'Get subordinate tree',
+    description:
+      'Returns a nested tree of all direct and indirect reports up to the specified depth.',
+  })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
-  @ApiQuery({ name: 'depth', required: false, type: Number, description: 'Maximum depth of the tree (default 5, max 10)', example: 3 })
+  @ApiQuery({
+    name: 'depth',
+    required: false,
+    type: Number,
+    description: 'Maximum depth of the tree (default 5, max 10)',
+    example: 3,
+  })
   getSubordinates(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -252,7 +285,11 @@ export class EmployeesController {
 
   @Get(':id/reporting-chain')
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'Get reporting chain to root', description: 'Returns an ordered array from the employee\'s direct manager up to the top of the hierarchy.' })
+  @ApiOperation({
+    summary: 'Get reporting chain to root',
+    description:
+      "Returns an ordered array from the employee's direct manager up to the top of the hierarchy.",
+  })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   getReportingChain(
     @CurrentUser('organizationId') organizationId: string,
@@ -268,7 +305,8 @@ export class EmployeesController {
   @RequirePermissions('employee:update')
   @ApiOperation({
     summary: 'Admin: send password reset email to employee',
-    description: 'Generates a 24-hour reset token, stores it in Redis, and sends the employee an email with a reset link. A confirmation email is sent automatically after the password is changed.',
+    description:
+      'Generates a 24-hour reset token, stores it in Redis, and sends the employee an email with a reset link. A confirmation email is sent automatically after the password is changed.',
   })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   sendPasswordResetEmail(

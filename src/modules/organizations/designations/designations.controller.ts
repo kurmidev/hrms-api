@@ -42,28 +42,36 @@ export class DesignationsController {
   @RequirePermissions('employee:read')
   @ApiOperation({
     summary: 'Get designations for employee assignment',
-    description: 'Returns all active designations ordered by department hierarchy level, then seniority level. Use this for employee onboarding forms.',
+    description:
+      'Returns all active designations ordered by department hierarchy level, then seniority level. Use this for employee onboarding forms.',
   })
-  @ApiResponse({ status: 200, description: 'Ordered designations for assignment', type: [DesignationResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'Ordered designations for assignment',
+    type: [DesignationResponseDto],
+  })
   findForAssignment(@CurrentUser('organizationId') organizationId: string) {
     return this.designationsService.findForAssignment(organizationId);
   }
 
   @Post()
   @RequirePermissions('employee:create')
-  @ApiOperation({ summary: 'Create designation', description: 'Creates a job designation linked to a department. Level 1 = most senior.' })
+  @ApiOperation({
+    summary: 'Create designation',
+    description: 'Creates a job designation linked to a department. Level 1 = most senior.',
+  })
   @ApiResponse({ status: 201, description: 'Designation created', type: DesignationResponseDto })
   @ApiResponse({ status: 400, description: 'Validation error or department not found' })
-  create(
-    @CurrentUser('organizationId') organizationId: string,
-    @Body() dto: CreateDesignationDto,
-  ) {
+  create(@CurrentUser('organizationId') organizationId: string, @Body() dto: CreateDesignationDto) {
     return this.designationsService.create(organizationId, dto);
   }
 
   @Get()
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'List designations', description: 'Paginated list ordered by level (most senior first). Filter by ?departmentId=...' })
+  @ApiOperation({
+    summary: 'List designations',
+    description: 'Paginated list ordered by level (most senior first). Filter by ?departmentId=...',
+  })
   @ApiResponse({ status: 200, description: 'Designations list' })
   findAll(
     @CurrentUser('organizationId') organizationId: string,
@@ -78,16 +86,16 @@ export class DesignationsController {
   @ApiParam({ name: 'id', description: 'Designation UUID' })
   @ApiResponse({ status: 200, description: 'Designation details', type: DesignationResponseDto })
   @ApiResponse({ status: 404, description: 'Designation not found' })
-  findOne(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.designationsService.findOne(organizationId, id);
   }
 
   @Put(':id')
   @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Update designation', description: 'Updates name, department, level, or linked payroll structure.' })
+  @ApiOperation({
+    summary: 'Update designation',
+    description: 'Updates name, department, level, or linked payroll structure.',
+  })
   @ApiParam({ name: 'id', description: 'Designation UUID' })
   @ApiResponse({ status: 200, description: 'Designation updated', type: DesignationResponseDto })
   @ApiResponse({ status: 400, description: 'Validation error or department not found' })
@@ -103,15 +111,15 @@ export class DesignationsController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('employee:delete')
-  @ApiOperation({ summary: 'Soft-delete designation', description: 'Soft-deletes. Fails if employees are assigned to it.' })
+  @ApiOperation({
+    summary: 'Soft-delete designation',
+    description: 'Soft-deletes. Fails if employees are assigned to it.',
+  })
   @ApiParam({ name: 'id', description: 'Designation UUID' })
   @ApiResponse({ status: 200, description: 'Designation soft-deleted' })
   @ApiResponse({ status: 400, description: 'Designation has assigned employees' })
   @ApiResponse({ status: 404, description: 'Designation not found' })
-  remove(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.designationsService.remove(organizationId, id);
   }
 
@@ -122,10 +130,7 @@ export class DesignationsController {
   @ApiParam({ name: 'id', description: 'Designation UUID' })
   @ApiResponse({ status: 200, description: 'Designation restored', type: DesignationResponseDto })
   @ApiResponse({ status: 404, description: 'Deleted designation not found' })
-  restore(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  restore(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.designationsService.restore(organizationId, id);
   }
 }

@@ -26,7 +26,12 @@ const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
       { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
       { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
       { widgetType: 'chart_employee_status', title: 'Employee Status', position: 4, colSpan: 2 },
-      { widgetType: 'chart_department_headcount', title: 'Dept Headcount', position: 5, colSpan: 2 },
+      {
+        widgetType: 'chart_department_headcount',
+        title: 'Dept Headcount',
+        position: 5,
+        colSpan: 2,
+      },
       { widgetType: 'table_recent_joiners', title: 'Recent Joiners', position: 6, colSpan: 2 },
       { widgetType: 'activity_recent', title: 'Recent Activity', position: 7, colSpan: 2 },
     ],
@@ -40,7 +45,12 @@ const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
       { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
       { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
       { widgetType: 'chart_employee_status', title: 'Employee Status', position: 4, colSpan: 2 },
-      { widgetType: 'chart_department_headcount', title: 'Dept Headcount', position: 5, colSpan: 2 },
+      {
+        widgetType: 'chart_department_headcount',
+        title: 'Dept Headcount',
+        position: 5,
+        colSpan: 2,
+      },
       { widgetType: 'table_recent_joiners', title: 'Recent Joiners', position: 6, colSpan: 2 },
       { widgetType: 'activity_recent', title: 'Recent Activity', position: 7, colSpan: 2 },
     ],
@@ -54,7 +64,12 @@ const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
       { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
       { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
       { widgetType: 'chart_employee_status', title: 'Employee Status', position: 4, colSpan: 2 },
-      { widgetType: 'chart_department_headcount', title: 'Dept Headcount', position: 5, colSpan: 2 },
+      {
+        widgetType: 'chart_department_headcount',
+        title: 'Dept Headcount',
+        position: 5,
+        colSpan: 2,
+      },
       { widgetType: 'table_recent_joiners', title: 'Recent Joiners', position: 6, colSpan: 2 },
       { widgetType: 'activity_recent', title: 'Recent Activity', position: 7, colSpan: 2 },
     ],
@@ -124,10 +139,7 @@ export class DashboardService {
     return this.prisma.dashboardConfig.findMany({
       where: {
         organizationId,
-        OR: [
-          { userId },
-          { isDefault: true, roleName },
-        ],
+        OR: [{ userId }, { isDefault: true, roleName }],
       },
       include: {
         widgets: { orderBy: { position: 'asc' } },

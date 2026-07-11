@@ -110,7 +110,9 @@ export class LeavePoliciesService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateLeavePolicyDto) {
-    const policy = await this.prisma.leavePolicy.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const policy = await this.prisma.leavePolicy.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!policy) throw new NotFoundException('Leave policy not found');
 
     return this.prisma.leavePolicy.update({
@@ -151,7 +153,9 @@ export class LeavePoliciesService {
   }
 
   async restore(organizationId: string, id: string) {
-    const policy = await this.prisma.leavePolicy.findFirst({ where: { id, organizationId, deletedAt: { not: null } } });
+    const policy = await this.prisma.leavePolicy.findFirst({
+      where: { id, organizationId, deletedAt: { not: null } },
+    });
     if (!policy) throw new NotFoundException('Deleted leave policy not found');
     return this.prisma.leavePolicy.update({ where: { id }, data: { deletedAt: null } });
   }
@@ -159,7 +163,12 @@ export class LeavePoliciesService {
   async findTrashed(organizationId: string, pagination: PaginationDto) {
     const where = { organizationId, deletedAt: { not: null } };
     const [data, total] = await Promise.all([
-      this.prisma.leavePolicy.findMany({ where, orderBy: { deletedAt: 'desc' }, skip: pagination.skip, take: pagination.limit }),
+      this.prisma.leavePolicy.findMany({
+        where,
+        orderBy: { deletedAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
       this.prisma.leavePolicy.count({ where }),
     ]);
     return paginate(data, total, pagination);
@@ -200,7 +209,12 @@ export class LeavePoliciesService {
     return rule;
   }
 
-  async updateRule(organizationId: string, policyId: string, ruleId: string, dto: UpdateLeaveRuleDto) {
+  async updateRule(
+    organizationId: string,
+    policyId: string,
+    ruleId: string,
+    dto: UpdateLeaveRuleDto,
+  ) {
     await this.verifyPolicy(organizationId, policyId);
     const rule = await this.prisma.leavePolicyRule.findFirst({
       where: { id: ruleId, leavePolicyId: policyId, organizationId, deletedAt: null },
@@ -233,7 +247,10 @@ export class LeavePoliciesService {
     });
     if (!rule) throw new NotFoundException('Leave policy rule not found');
 
-    await this.prisma.leavePolicyRule.update({ where: { id: ruleId }, data: { deletedAt: new Date() } });
+    await this.prisma.leavePolicyRule.update({
+      where: { id: ruleId },
+      data: { deletedAt: new Date() },
+    });
     return { deleted: true, message: `Rule "${rule.name}" deleted successfully` };
   }
 
@@ -249,7 +266,12 @@ export class LeavePoliciesService {
     await this.verifyPolicy(organizationId, policyId);
     const where = { leavePolicyId: policyId, organizationId, deletedAt: { not: null } };
     const [data, total] = await Promise.all([
-      this.prisma.leavePolicyRule.findMany({ where, orderBy: { deletedAt: 'desc' }, skip: pagination.skip, take: pagination.limit }),
+      this.prisma.leavePolicyRule.findMany({
+        where,
+        orderBy: { deletedAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
       this.prisma.leavePolicyRule.count({ where }),
     ]);
     return paginate(data, total, pagination);
@@ -271,7 +293,9 @@ export class LeavePoliciesService {
   }
 
   private async verifyPolicy(organizationId: string, policyId: string) {
-    const policy = await this.prisma.leavePolicy.findFirst({ where: { id: policyId, organizationId, deletedAt: null } });
+    const policy = await this.prisma.leavePolicy.findFirst({
+      where: { id: policyId, organizationId, deletedAt: null },
+    });
     if (!policy) throw new NotFoundException('Leave policy not found');
     return policy;
   }
@@ -279,7 +303,9 @@ export class LeavePoliciesService {
   private validateRule(dto: CreateLeaveRuleDto) {
     const allowedActions = RULE_TYPE_ACTION_MAP[dto.ruleType as RuleType];
     if (!allowedActions) {
-      throw new BadRequestException(`Invalid ruleType: ${dto.ruleType}. Allowed: ${RULE_TYPES.join(', ')}`);
+      throw new BadRequestException(
+        `Invalid ruleType: ${dto.ruleType}. Allowed: ${RULE_TYPES.join(', ')}`,
+      );
     }
 
     const action = dto.action as { type: string };
@@ -290,15 +316,27 @@ export class LeavePoliciesService {
     }
 
     for (const condition of dto.conditions as LeaveRuleConditionDto[]) {
-      if (!ALLOWED_CONDITION_FIELDS.includes(condition.field as (typeof ALLOWED_CONDITION_FIELDS)[number])) {
-        throw new BadRequestException(`Invalid condition field: "${condition.field}". Allowed: ${ALLOWED_CONDITION_FIELDS.join(', ')}`);
+      if (
+        !ALLOWED_CONDITION_FIELDS.includes(
+          condition.field as (typeof ALLOWED_CONDITION_FIELDS)[number],
+        )
+      ) {
+        throw new BadRequestException(
+          `Invalid condition field: "${condition.field}". Allowed: ${ALLOWED_CONDITION_FIELDS.join(', ')}`,
+        );
       }
-      if (!CONDITION_OPERATORS.includes(condition.operator as (typeof CONDITION_OPERATORS)[number])) {
-        throw new BadRequestException(`Invalid operator: "${condition.operator}". Allowed: ${CONDITION_OPERATORS.join(', ')}`);
+      if (
+        !CONDITION_OPERATORS.includes(condition.operator as (typeof CONDITION_OPERATORS)[number])
+      ) {
+        throw new BadRequestException(
+          `Invalid operator: "${condition.operator}". Allowed: ${CONDITION_OPERATORS.join(', ')}`,
+        );
       }
 
-      if ((condition.field === 'employmentType') && !['IN', 'NOT_IN'].includes(condition.operator)) {
-        throw new BadRequestException(`Condition field "employmentType" only supports IN / NOT_IN operators`);
+      if (condition.field === 'employmentType' && !['IN', 'NOT_IN'].includes(condition.operator)) {
+        throw new BadRequestException(
+          `Condition field "employmentType" only supports IN / NOT_IN operators`,
+        );
       }
     }
   }

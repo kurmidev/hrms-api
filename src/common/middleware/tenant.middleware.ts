@@ -8,8 +8,7 @@ export class TenantMiddleware implements NestMiddleware {
 
   async use(req: Request & { organizationId?: string }, res: Response, next: NextFunction) {
     const organizationId =
-      (req.headers['x-organization-id'] as string) ||
-      (req.headers['x-tenant-id'] as string);
+      (req.headers['x-organization-id'] as string) || (req.headers['x-tenant-id'] as string);
 
     if (organizationId) {
       req.organizationId = organizationId;

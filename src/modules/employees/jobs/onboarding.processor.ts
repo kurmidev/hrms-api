@@ -49,11 +49,7 @@ export class OnboardingProcessor extends WorkerHost {
     `;
 
     await Promise.allSettled([
-      this.notifications.sendEmail(
-        data.email,
-        'Welcome — Your HRMS Login Credentials',
-        html,
-      ),
+      this.notifications.sendEmail(data.email, 'Welcome — Your HRMS Login Credentials', html),
       this.notifications.sendSms(
         data.phone,
         `Welcome! Your Employee ID: ${data.empCode}. Login: ${data.email}, Temp Password: ${data.tempPassword}. Change password on first login.`,
@@ -76,7 +72,10 @@ export class OnboardingProcessor extends WorkerHost {
 
     await Promise.allSettled([
       this.notifications.sendEmail(data.email, 'Complete Your Onboarding', html),
-      this.notifications.sendSms(data.phone, `You've been invited to join the team. Complete your onboarding at: ${link}`),
+      this.notifications.sendSms(
+        data.phone,
+        `You've been invited to join the team. Complete your onboarding at: ${link}`,
+      ),
     ]);
 
     this.logger.log(`Invite notification sent to ${data.email}`);

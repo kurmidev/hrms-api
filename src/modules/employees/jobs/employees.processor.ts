@@ -34,7 +34,13 @@ interface PasswordResetConfirmationJobData {
   firstName: string;
 }
 
-function onboardingInviteHtml(firstName: string, empCode: string, tempPassword: string, email: string, preboardingUrl: string): string {
+function onboardingInviteHtml(
+  firstName: string,
+  empCode: string,
+  tempPassword: string,
+  email: string,
+  preboardingUrl: string,
+): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Welcome, ${firstName}! Your employee account is ready.</h2>
@@ -137,7 +143,13 @@ export class EmployeesProcessor extends WorkerHost {
   }
 
   private async handleOnboardingInvite(data: OnboardingInviteJobData) {
-    const html = onboardingInviteHtml(data.firstName, data.empCode, data.tempPassword, data.email, data.preboardingUrl);
+    const html = onboardingInviteHtml(
+      data.firstName,
+      data.empCode,
+      data.tempPassword,
+      data.email,
+      data.preboardingUrl,
+    );
     await Promise.allSettled([
       this.notifications.sendEmail(data.email, 'Welcome — Complete Your Onboarding', html),
       this.notifications.sendSms(
@@ -151,7 +163,11 @@ export class EmployeesProcessor extends WorkerHost {
   private async handleWelcome(data: WelcomeJobData) {
     const html = welcomeHtml(data.firstName, data.empCode, data.loginUrl);
     await Promise.allSettled([
-      this.notifications.sendEmail(data.email, 'Welcome to the Team — Your Account is Active', html),
+      this.notifications.sendEmail(
+        data.email,
+        'Welcome to the Team — Your Account is Active',
+        html,
+      ),
       this.notifications.sendSms(
         data.phone,
         `Welcome ${data.firstName}! Your HRMS account (${data.empCode}) is now active. Login at: ${data.loginUrl}`,

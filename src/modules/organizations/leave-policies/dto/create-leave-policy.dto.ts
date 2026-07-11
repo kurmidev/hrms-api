@@ -33,7 +33,10 @@ export class CreateLeavePolicyDto {
   @Max(365)
   daysPerYear: number;
 
-  @ApiPropertyOptional({ description: 'Maximum days that can be carried forward to next year. 0 = no carry forward.', example: 6 })
+  @ApiPropertyOptional({
+    description: 'Maximum days that can be carried forward to next year. 0 = no carry forward.',
+    example: 6,
+  })
   @IsNumber()
   @Min(0)
   @IsOptional()
@@ -53,7 +56,10 @@ export class CreateLeavePolicyDto {
   @IsOptional()
   isEncashable?: boolean;
 
-  @ApiPropertyOptional({ description: 'Whether absent during leave is marked as Loss of Pay', example: false })
+  @ApiPropertyOptional({
+    description: 'Whether absent during leave is marked as Loss of Pay',
+    example: false,
+  })
   @IsBoolean()
   @IsOptional()
   isLopEligible?: boolean;
@@ -64,13 +70,19 @@ export class CreateLeavePolicyDto {
   @IsOptional()
   minAdvanceDays?: number;
 
-  @ApiPropertyOptional({ description: 'Maximum consecutive days allowed per application', example: 3 })
+  @ApiPropertyOptional({
+    description: 'Maximum consecutive days allowed per application',
+    example: 3,
+  })
   @IsInt()
   @Min(1)
   @IsOptional()
   maxConsecutiveDays?: number;
 
-  @ApiPropertyOptional({ description: 'Whether this leave is available during probation period', example: false })
+  @ApiPropertyOptional({
+    description: 'Whether this leave is available during probation period',
+    example: false,
+  })
   @IsBoolean()
   @IsOptional()
   allowedInProbation?: boolean;

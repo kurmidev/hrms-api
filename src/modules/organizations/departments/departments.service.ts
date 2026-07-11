@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PaginationDto, paginate } from '../../../common/dto/pagination.dto';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -14,16 +19,23 @@ export class DepartmentsService {
     const duplicate = await this.prisma.department.findFirst({
       where: { organizationId, name: dto.name, deletedAt: null },
     });
-    if (duplicate) throw new ConflictException(`Department "${dto.name}" already exists in this organization`);
+    if (duplicate)
+      throw new ConflictException(`Department "${dto.name}" already exists in this organization`);
 
     let hierarchyLevel = 0;
     if (dto.parentId) {
-      const parent = await this.verifyDeptBelongsToOrg(dto.parentId, organizationId, 'Parent department not found in this organization');
+      const parent = await this.verifyDeptBelongsToOrg(
+        dto.parentId,
+        organizationId,
+        'Parent department not found in this organization',
+      );
       hierarchyLevel = parent.hierarchyLevel + 1;
     }
 
     if (dto.headEmployeeId) {
-      const emp = await this.prisma.employee.findFirst({ where: { id: dto.headEmployeeId, organizationId } });
+      const emp = await this.prisma.employee.findFirst({
+        where: { id: dto.headEmployeeId, organizationId },
+      });
       if (!emp) throw new BadRequestException('Head employee not found in this organization');
     }
 
@@ -137,14 +149,17 @@ export class DepartmentsService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateDepartmentDto) {
-    const dept = await this.prisma.department.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const dept = await this.prisma.department.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!dept) throw new NotFoundException('Department not found');
 
     if (dto.name && dto.name !== dept.name) {
       const duplicate = await this.prisma.department.findFirst({
         where: { organizationId, name: dto.name, id: { not: id }, deletedAt: null },
       });
-      if (duplicate) throw new ConflictException(`Department "${dto.name}" already exists in this organization`);
+      if (duplicate)
+        throw new ConflictException(`Department "${dto.name}" already exists in this organization`);
     }
 
     let hierarchyLevel = dept.hierarchyLevel;
@@ -159,7 +174,9 @@ export class DepartmentsService {
     }
 
     if (dto.headEmployeeId) {
-      const emp = await this.prisma.employee.findFirst({ where: { id: dto.headEmployeeId, organizationId } });
+      const emp = await this.prisma.employee.findFirst({
+        where: { id: dto.headEmployeeId, organizationId },
+      });
       if (!emp) throw new BadRequestException('Head employee not found in this organization');
     }
 
@@ -184,7 +201,9 @@ export class DepartmentsService {
   }
 
   async move(organizationId: string, id: string, dto: MoveDepartmentDto) {
-    const dept = await this.prisma.department.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const dept = await this.prisma.department.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!dept) throw new NotFoundException('Department not found');
 
     const newParentId = dto.newParentId ?? null;
@@ -248,7 +267,9 @@ export class DepartmentsService {
   }
 
   async restore(organizationId: string, id: string) {
-    const dept = await this.prisma.department.findFirst({ where: { id, organizationId, deletedAt: { not: null } } });
+    const dept = await this.prisma.department.findFirst({
+      where: { id, organizationId, deletedAt: { not: null } },
+    });
     if (!dept) throw new NotFoundException('Deleted department not found');
     return this.prisma.department.update({ where: { id }, data: { deletedAt: null } });
   }
@@ -256,24 +277,43 @@ export class DepartmentsService {
   async findTrashed(organizationId: string, pagination: PaginationDto) {
     const where = { organizationId, deletedAt: { not: null } };
     const [data, total] = await Promise.all([
-      this.prisma.department.findMany({ where, orderBy: { deletedAt: 'desc' }, skip: pagination.skip, take: pagination.limit }),
+      this.prisma.department.findMany({
+        where,
+        orderBy: { deletedAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
       this.prisma.department.count({ where }),
     ]);
     return paginate(data, total, pagination);
   }
 
-  private async verifyDeptBelongsToOrg(deptId: string, organizationId: string, errorMessage: string) {
-    const dept = await this.prisma.department.findFirst({ where: { id: deptId, organizationId, deletedAt: null } });
+  private async verifyDeptBelongsToOrg(
+    deptId: string,
+    organizationId: string,
+    errorMessage: string,
+  ) {
+    const dept = await this.prisma.department.findFirst({
+      where: { id: deptId, organizationId, deletedAt: null },
+    });
     if (!dept) throw new BadRequestException(errorMessage);
     return dept;
   }
 
-  private async validateParentChange(id: string, newParentId: string | null | undefined, organizationId: string) {
+  private async validateParentChange(
+    id: string,
+    newParentId: string | null | undefined,
+    organizationId: string,
+  ) {
     if (!newParentId) return;
     if (newParentId === id) {
       throw new BadRequestException('A department cannot be its own parent');
     }
-    await this.verifyDeptBelongsToOrg(newParentId, organizationId, 'Parent department not found in this organization');
+    await this.verifyDeptBelongsToOrg(
+      newParentId,
+      organizationId,
+      'Parent department not found in this organization',
+    );
     await this.checkCircularReference(id, newParentId);
   }
 
@@ -281,17 +321,28 @@ export class DepartmentsService {
     let currentId: string | null = proposedParentId;
     while (currentId) {
       if (currentId === id) {
-        throw new BadRequestException('Circular department hierarchy detected — a department cannot be a descendant of itself');
+        throw new BadRequestException(
+          'Circular department hierarchy detected — a department cannot be a descendant of itself',
+        );
       }
-      const parent = await this.prisma.department.findUnique({ where: { id: currentId }, select: { parentId: true } });
+      const parent = await this.prisma.department.findUnique({
+        where: { id: currentId },
+        select: { parentId: true },
+      });
       currentId = parent?.parentId ?? null;
     }
   }
 
   private async cascadeHierarchyLevels(parentId: string, parentLevel: number) {
-    const children = await this.prisma.department.findMany({ where: { parentId, deletedAt: null }, select: { id: true } });
+    const children = await this.prisma.department.findMany({
+      where: { parentId, deletedAt: null },
+      select: { id: true },
+    });
     for (const child of children) {
-      await this.prisma.department.update({ where: { id: child.id }, data: { hierarchyLevel: parentLevel + 1 } });
+      await this.prisma.department.update({
+        where: { id: child.id },
+        data: { hierarchyLevel: parentLevel + 1 },
+      });
       await this.cascadeHierarchyLevels(child.id, parentLevel + 1);
     }
   }

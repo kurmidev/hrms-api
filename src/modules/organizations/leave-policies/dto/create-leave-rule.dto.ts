@@ -14,7 +14,13 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export const RULE_TYPES = ['ELIGIBILITY', 'ENTITLEMENT', 'APPLICATION', 'APPROVAL', 'CARRY_FORWARD'] as const;
+export const RULE_TYPES = [
+  'ELIGIBILITY',
+  'ENTITLEMENT',
+  'APPLICATION',
+  'APPROVAL',
+  'CARRY_FORWARD',
+] as const;
 export type RuleType = (typeof RULE_TYPES)[number];
 
 export const CONDITION_LOGIC_OPTIONS = ['AND', 'OR'] as const;
@@ -66,13 +72,23 @@ export class LeaveRuleActionDto {
   @IsString()
   type: string;
 
-  @ApiPropertyOptional({ description: 'Numeric value (days, months, levels). Required for most non-DENY/AUTO_APPROVE actions.', example: 12 })
+  @ApiPropertyOptional({
+    description:
+      'Numeric value (days, months, levels). Required for most non-DENY/AUTO_APPROVE actions.',
+    example: 12,
+  })
   value?: number;
 
-  @ApiPropertyOptional({ description: 'Human-readable reason (used for DENY actions)', example: 'Not eligible during probation' })
+  @ApiPropertyOptional({
+    description: 'Human-readable reason (used for DENY actions)',
+    example: 'Not eligible during probation',
+  })
   reason?: string;
 
-  @ApiPropertyOptional({ description: 'Number of approval levels for MULTI_LEVEL approvals', example: 2 })
+  @ApiPropertyOptional({
+    description: 'Number of approval levels for MULTI_LEVEL approvals',
+    example: 2,
+  })
   levels?: number;
 }
 
@@ -83,7 +99,10 @@ export class CreateLeaveRuleDto {
   @MaxLength(200)
   name: string;
 
-  @ApiProperty({ enum: RULE_TYPES, description: 'What aspect of the leave policy this rule governs' })
+  @ApiProperty({
+    enum: RULE_TYPES,
+    description: 'What aspect of the leave policy this rule governs',
+  })
   @IsIn(RULE_TYPES)
   ruleType: RuleType;
 
@@ -95,13 +114,19 @@ export class CreateLeaveRuleDto {
   @IsIn(CONDITION_LOGIC_OPTIONS)
   conditionLogic: 'AND' | 'OR';
 
-  @ApiProperty({ type: [LeaveRuleConditionDto], description: 'Conditions that must be satisfied for this rule to fire' })
+  @ApiProperty({
+    type: [LeaveRuleConditionDto],
+    description: 'Conditions that must be satisfied for this rule to fire',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => LeaveRuleConditionDto)
   conditions: LeaveRuleConditionDto[];
 
-  @ApiProperty({ type: LeaveRuleActionDto, description: 'Action to execute when conditions are satisfied' })
+  @ApiProperty({
+    type: LeaveRuleActionDto,
+    description: 'Action to execute when conditions are satisfied',
+  })
   @IsObject()
   @ValidateNested()
   @Type(() => LeaveRuleActionDto)

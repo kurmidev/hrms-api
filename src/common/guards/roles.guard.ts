@@ -3,7 +3,12 @@ import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
-const MUST_CHANGE_EXEMPT_PATHS = ['/auth/change-password', '/auth/logout', '/auth/me', '/auth/refresh'];
+const MUST_CHANGE_EXEMPT_PATHS = [
+  '/auth/change-password',
+  '/auth/logout',
+  '/auth/me',
+  '/auth/refresh',
+];
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -30,7 +35,10 @@ export class PermissionsGuard implements CanActivate {
       const path = (url as string).split('?')[0];
       const isExempt = MUST_CHANGE_EXEMPT_PATHS.some((exempt) => path.endsWith(exempt));
       if (!isExempt) {
-        throw new ForbiddenException({ message: 'Password change required', code: 'MUST_CHANGE_PASSWORD' });
+        throw new ForbiddenException({
+          message: 'Password change required',
+          code: 'MUST_CHANGE_PASSWORD',
+        });
       }
     }
 
@@ -39,9 +47,7 @@ export class PermissionsGuard implements CanActivate {
     const userPerms: string[] = user.permissions ?? [];
     if (userPerms.includes('*')) return true;
 
-    const hasPermission = requiredPermissions.every((permission) =>
-      userPerms.includes(permission),
-    );
+    const hasPermission = requiredPermissions.every((permission) => userPerms.includes(permission));
 
     if (!hasPermission) {
       throw new ForbiddenException(

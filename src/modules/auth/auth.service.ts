@@ -97,9 +97,7 @@ export class AuthService {
       }),
     ]);
 
-    const permissions = user.userRoles.flatMap(
-      (ur) => (ur.role.permissions as string[]) || [],
-    );
+    const permissions = user.userRoles.flatMap((ur) => (ur.role.permissions as string[]) || []);
 
     return {
       ...tokens,
@@ -125,7 +123,9 @@ export class AuthService {
 
   // ── OTP: send ─────────────────────────────────────────────────────────────
 
-  async sendOtp(phone: string): Promise<{ sent: boolean; message: string; validForSeconds: number }> {
+  async sendOtp(
+    phone: string,
+  ): Promise<{ sent: boolean; message: string; validForSeconds: number }> {
     const user = await this.prisma.user.findFirst({
       where: { phone, isActive: true },
     });
@@ -225,9 +225,7 @@ export class AuthService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    const permissions = user.userRoles.flatMap(
-      (ur) => (ur.role.permissions as string[]) || [],
-    );
+    const permissions = user.userRoles.flatMap((ur) => (ur.role.permissions as string[]) || []);
 
     return {
       id: user.id,
@@ -261,7 +259,10 @@ export class AuthService {
     if (!match) throw new UnauthorizedException('Current password is incorrect');
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: false } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: false },
+    });
     await this.redis.deleteRefreshToken(userId);
 
     this.sendPasswordChangedEmail(user.email, user.employee?.firstName ?? 'there').catch(() => {});
@@ -283,14 +284,20 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await Promise.all([
-      this.prisma.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: false } }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash, mustChangePassword: false },
+      }),
       this.redis.del(`pwd-reset:${token}`),
       this.redis.deleteRefreshToken(userId),
     ]);
 
     this.sendPasswordChangedEmail(user.email, user.employee?.firstName ?? 'there').catch(() => {});
 
-    return { reset: true, message: 'Password reset successfully. You can now log in with your new password.' };
+    return {
+      reset: true,
+      message: 'Password reset successfully. You can now log in with your new password.',
+    };
   }
 
   // ── Session management ────────────────────────────────────────────────────

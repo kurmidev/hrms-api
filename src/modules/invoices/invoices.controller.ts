@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '@common/decorators/public.decorator';
 import { PlatformJwtAuthGuard } from '../platform-auth/platform-jwt-auth.guard';
@@ -23,10 +14,7 @@ export class InvoicesController {
   constructor(private readonly service: InvoicesService) {}
 
   @Get('invoices')
-  findAll(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
     return this.service.findAll(Number(page) || 1, Number(limit) || 20);
   }
 

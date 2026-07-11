@@ -17,11 +17,7 @@ import { EmployeesProcessor } from './jobs/employees.processor';
     BullModule.registerQueue({ name: 'employees' }),
     MulterModule.register({ storage: memoryStorage() }),
   ],
-  controllers: [
-    EmployeesController,
-    OnboardingController,
-    OnboardingPublicController,
-  ],
+  controllers: [EmployeesController, OnboardingController, OnboardingPublicController],
   providers: [
     EmployeesService,
     OnboardingService,

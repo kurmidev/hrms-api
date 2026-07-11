@@ -29,16 +29,16 @@ export class DepartmentsController {
 
   @Post()
   @RequirePermissions('employee:create')
-  @ApiOperation({ summary: 'Create department', description: 'Creates a new department, optionally nested under a parent.' })
+  @ApiOperation({
+    summary: 'Create department',
+    description: 'Creates a new department, optionally nested under a parent.',
+  })
   @ApiResponse({ status: 201, description: 'Department created', type: DepartmentResponseDto })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 403, description: 'Missing permission: employee:create' })
   @ApiResponse({ status: 409, description: 'Department name already exists' })
-  create(
-    @CurrentUser('organizationId') organizationId: string,
-    @Body() dto: CreateDepartmentDto,
-  ) {
+  create(@CurrentUser('organizationId') organizationId: string, @Body() dto: CreateDepartmentDto) {
     return this.departmentsService.create(organizationId, dto);
   }
 
@@ -56,7 +56,11 @@ export class DepartmentsController {
   // NOTE: 'tree' route MUST be declared before ':id' to avoid NestJS treating "tree" as an id param
   @Get('tree')
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'Get department tree', description: 'Returns the full department hierarchy as a nested tree. Root departments have parentId = null.' })
+  @ApiOperation({
+    summary: 'Get department tree',
+    description:
+      'Returns the full department hierarchy as a nested tree. Root departments have parentId = null.',
+  })
   @ApiResponse({ status: 200, description: 'Department tree', type: [DepartmentTreeNodeDto] })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 403, description: 'Missing permission: employee:read' })
@@ -66,7 +70,10 @@ export class DepartmentsController {
 
   @Get()
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'List departments', description: 'Paginated flat list of all departments, including parent info and counts.' })
+  @ApiOperation({
+    summary: 'List departments',
+    description: 'Paginated flat list of all departments, including parent info and counts.',
+  })
   @ApiResponse({ status: 200, description: 'Departments list' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 403, description: 'Missing permission: employee:read' })
@@ -85,16 +92,17 @@ export class DepartmentsController {
   @ApiResponse({ status: 404, description: 'Department not found' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 403, description: 'Missing permission: employee:read' })
-  findOne(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.departmentsService.findOne(organizationId, id);
   }
 
   @Put(':id')
   @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Update department', description: 'Updates department name, head, or parent. Circular hierarchy changes are rejected.' })
+  @ApiOperation({
+    summary: 'Update department',
+    description:
+      'Updates department name, head, or parent. Circular hierarchy changes are rejected.',
+  })
   @ApiParam({ name: 'id', description: 'Department UUID' })
   @ApiResponse({ status: 200, description: 'Department updated', type: DepartmentResponseDto })
   @ApiResponse({ status: 400, description: 'Validation error or circular hierarchy' })
@@ -112,7 +120,10 @@ export class DepartmentsController {
 
   @Patch(':id/move')
   @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Move department', description: 'Moves a department to a new parent. Set newParentId to null to promote to root.' })
+  @ApiOperation({
+    summary: 'Move department',
+    description: 'Moves a department to a new parent. Set newParentId to null to promote to root.',
+  })
   @ApiParam({ name: 'id', description: 'Department UUID' })
   @ApiResponse({ status: 200, description: 'Department moved' })
   @ApiResponse({ status: 400, description: 'Circular hierarchy or parent not found' })
@@ -130,15 +141,19 @@ export class DepartmentsController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('employee:delete')
-  @ApiOperation({ summary: 'Soft-delete department', description: 'Soft-deletes a department. Fails if it has employees, active sub-departments, or active designations.' })
+  @ApiOperation({
+    summary: 'Soft-delete department',
+    description:
+      'Soft-deletes a department. Fails if it has employees, active sub-departments, or active designations.',
+  })
   @ApiParam({ name: 'id', description: 'Department UUID' })
   @ApiResponse({ status: 200, description: 'Department soft-deleted' })
-  @ApiResponse({ status: 400, description: 'Department has employees, sub-departments, or designations' })
+  @ApiResponse({
+    status: 400,
+    description: 'Department has employees, sub-departments, or designations',
+  })
   @ApiResponse({ status: 404, description: 'Department not found' })
-  remove(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.departmentsService.remove(organizationId, id);
   }
 
@@ -149,10 +164,7 @@ export class DepartmentsController {
   @ApiParam({ name: 'id', description: 'Department UUID' })
   @ApiResponse({ status: 200, description: 'Department restored', type: DepartmentResponseDto })
   @ApiResponse({ status: 404, description: 'Deleted department not found' })
-  restore(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  restore(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.departmentsService.restore(organizationId, id);
   }
 }

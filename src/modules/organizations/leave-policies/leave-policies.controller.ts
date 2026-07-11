@@ -11,7 +11,14 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
@@ -34,7 +41,8 @@ export class LeavePoliciesController {
   @RequirePermissions('org:read')
   @ApiOperation({
     summary: 'Get leave rule schema',
-    description: 'Returns available condition fields, operators, rule types, and action types for building leave policy rules.',
+    description:
+      'Returns available condition fields, operators, rule types, and action types for building leave policy rules.',
   })
   getRuleSchema() {
     return LEAVE_RULE_SCHEMA;
@@ -52,19 +60,22 @@ export class LeavePoliciesController {
 
   @Post()
   @RequirePermissions('org:update')
-  @ApiOperation({ summary: 'Create leave policy', description: 'Creates a new leave policy with entitlement, accrual, and eligibility settings.' })
+  @ApiOperation({
+    summary: 'Create leave policy',
+    description: 'Creates a new leave policy with entitlement, accrual, and eligibility settings.',
+  })
   @ApiResponse({ status: 201, description: 'Leave policy created', type: LeavePolicyResponseDto })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  create(
-    @CurrentUser('organizationId') organizationId: string,
-    @Body() dto: CreateLeavePolicyDto,
-  ) {
+  create(@CurrentUser('organizationId') organizationId: string, @Body() dto: CreateLeavePolicyDto) {
     return this.leavePoliciesService.create(organizationId, dto);
   }
 
   @Get()
   @RequirePermissions('org:read')
-  @ApiOperation({ summary: 'List leave policies', description: 'Paginated list. Filter by ?leaveType=CASUAL or ?isActive=true.' })
+  @ApiOperation({
+    summary: 'List leave policies',
+    description: 'Paginated list. Filter by ?leaveType=CASUAL or ?isActive=true.',
+  })
   @ApiResponse({ status: 200, description: 'Leave policies list', type: [LeavePolicyResponseDto] })
   findAll(
     @CurrentUser('organizationId') organizationId: string,
@@ -75,14 +86,14 @@ export class LeavePoliciesController {
 
   @Get(':id')
   @RequirePermissions('org:read')
-  @ApiOperation({ summary: 'Get leave policy by ID', description: 'Returns the policy with all active rules embedded.' })
+  @ApiOperation({
+    summary: 'Get leave policy by ID',
+    description: 'Returns the policy with all active rules embedded.',
+  })
   @ApiParam({ name: 'id', description: 'Leave policy UUID' })
   @ApiResponse({ status: 200, description: 'Leave policy details', type: LeavePolicyResponseDto })
   @ApiResponse({ status: 404, description: 'Leave policy not found' })
-  findOne(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.leavePoliciesService.findOne(organizationId, id);
   }
 
@@ -103,14 +114,14 @@ export class LeavePoliciesController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('org:update')
-  @ApiOperation({ summary: 'Soft-delete leave policy', description: 'Soft-deletes the policy. Fails if employees are assigned to it.' })
+  @ApiOperation({
+    summary: 'Soft-delete leave policy',
+    description: 'Soft-deletes the policy. Fails if employees are assigned to it.',
+  })
   @ApiParam({ name: 'id', description: 'Leave policy UUID' })
   @ApiResponse({ status: 200, description: 'Leave policy soft-deleted' })
   @ApiResponse({ status: 400, description: 'Policy has assigned employees' })
-  remove(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.leavePoliciesService.remove(organizationId, id);
   }
 
@@ -119,10 +130,7 @@ export class LeavePoliciesController {
   @RequirePermissions('org:update')
   @ApiOperation({ summary: 'Restore soft-deleted leave policy' })
   @ApiParam({ name: 'id', description: 'Leave policy UUID' })
-  restore(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  restore(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.leavePoliciesService.restore(organizationId, id);
   }
 
@@ -144,11 +152,15 @@ export class LeavePoliciesController {
   @RequirePermissions('org:update')
   @ApiOperation({
     summary: 'Create leave policy rule',
-    description: 'Adds a conditional rule to the policy. Call GET /leave-policies/rule-schema first to understand available fields, operators, and actions.',
+    description:
+      'Adds a conditional rule to the policy. Call GET /leave-policies/rule-schema first to understand available fields, operators, and actions.',
   })
   @ApiParam({ name: 'policyId', description: 'Leave policy UUID' })
   @ApiResponse({ status: 201, description: 'Rule created', type: LeaveRuleResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid ruleType/action combination or unsupported condition field' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ruleType/action combination or unsupported condition field',
+  })
   createRule(
     @CurrentUser('organizationId') organizationId: string,
     @Param('policyId') policyId: string,
@@ -159,7 +171,10 @@ export class LeavePoliciesController {
 
   @Get(':policyId/rules')
   @RequirePermissions('org:read')
-  @ApiOperation({ summary: 'List rules for a leave policy', description: 'Returns rules ordered by priority (ascending). Active rules only.' })
+  @ApiOperation({
+    summary: 'List rules for a leave policy',
+    description: 'Returns rules ordered by priority (ascending). Active rules only.',
+  })
   @ApiParam({ name: 'policyId', description: 'Leave policy UUID' })
   @ApiResponse({ status: 200, description: 'Policy rules', type: [LeaveRuleResponseDto] })
   findRules(
@@ -172,9 +187,18 @@ export class LeavePoliciesController {
   @Patch(':policyId/rules/reorder')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('org:update')
-  @ApiOperation({ summary: 'Reorder rules by priority', description: 'Pass an ordered array of rule IDs. First ID gets priority 0, second gets priority 1, etc.' })
+  @ApiOperation({
+    summary: 'Reorder rules by priority',
+    description:
+      'Pass an ordered array of rule IDs. First ID gets priority 0, second gets priority 1, etc.',
+  })
   @ApiParam({ name: 'policyId', description: 'Leave policy UUID' })
-  @ApiBody({ schema: { type: 'object', properties: { ruleIds: { type: 'array', items: { type: 'string' } } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { ruleIds: { type: 'array', items: { type: 'string' } } },
+    },
+  })
   reorderRules(
     @CurrentUser('organizationId') organizationId: string,
     @Param('policyId') policyId: string,

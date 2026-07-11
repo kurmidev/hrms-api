@@ -70,7 +70,9 @@ export class PayrollStructuresService {
   }
 
   async update(organizationId: string, id: string, dto: UpdatePayrollStructureDto) {
-    const structure = await this.prisma.payrollStructure.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const structure = await this.prisma.payrollStructure.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!structure) throw new NotFoundException('Payroll structure not found');
 
     if (dto.components) {
@@ -106,7 +108,9 @@ export class PayrollStructuresService {
   }
 
   async restore(organizationId: string, id: string) {
-    const structure = await this.prisma.payrollStructure.findFirst({ where: { id, organizationId, deletedAt: { not: null } } });
+    const structure = await this.prisma.payrollStructure.findFirst({
+      where: { id, organizationId, deletedAt: { not: null } },
+    });
     if (!structure) throw new NotFoundException('Deleted payroll structure not found');
     return this.prisma.payrollStructure.update({ where: { id }, data: { deletedAt: null } });
   }
@@ -114,17 +118,26 @@ export class PayrollStructuresService {
   async findTrashed(organizationId: string, pagination: PaginationDto) {
     const where = { organizationId, deletedAt: { not: null } };
     const [data, total] = await Promise.all([
-      this.prisma.payrollStructure.findMany({ where, orderBy: { deletedAt: 'desc' }, skip: pagination.skip, take: pagination.limit }),
+      this.prisma.payrollStructure.findMany({
+        where,
+        orderBy: { deletedAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
       this.prisma.payrollStructure.count({ where }),
     ]);
     return paginate(data, total, pagination);
   }
 
   async assignDesignation(organizationId: string, structureId: string, designationId: string) {
-    const structure = await this.prisma.payrollStructure.findFirst({ where: { id: structureId, organizationId, deletedAt: null } });
+    const structure = await this.prisma.payrollStructure.findFirst({
+      where: { id: structureId, organizationId, deletedAt: null },
+    });
     if (!structure) throw new NotFoundException('Payroll structure not found');
 
-    const designation = await this.prisma.designation.findFirst({ where: { id: designationId, organizationId, deletedAt: null } });
+    const designation = await this.prisma.designation.findFirst({
+      where: { id: designationId, organizationId, deletedAt: null },
+    });
     if (!designation) throw new NotFoundException('Designation not found');
 
     return this.prisma.designation.update({
@@ -135,13 +148,16 @@ export class PayrollStructuresService {
   }
 
   async unassignDesignation(organizationId: string, structureId: string, designationId: string) {
-    const structure = await this.prisma.payrollStructure.findFirst({ where: { id: structureId, organizationId } });
+    const structure = await this.prisma.payrollStructure.findFirst({
+      where: { id: structureId, organizationId },
+    });
     if (!structure) throw new NotFoundException('Payroll structure not found');
 
     const designation = await this.prisma.designation.findFirst({
       where: { id: designationId, organizationId, payrollStructureId: structureId },
     });
-    if (!designation) throw new NotFoundException('Designation not linked to this payroll structure');
+    if (!designation)
+      throw new NotFoundException('Designation not linked to this payroll structure');
 
     return this.prisma.designation.update({
       where: { id: designationId },
@@ -150,7 +166,9 @@ export class PayrollStructuresService {
   }
 
   async findDesignations(organizationId: string, structureId: string) {
-    const structure = await this.prisma.payrollStructure.findFirst({ where: { id: structureId, organizationId, deletedAt: null } });
+    const structure = await this.prisma.payrollStructure.findFirst({
+      where: { id: structureId, organizationId, deletedAt: null },
+    });
     if (!structure) throw new NotFoundException('Payroll structure not found');
 
     return this.prisma.designation.findMany({
@@ -194,15 +212,21 @@ export class PayrollStructuresService {
 
     const hasEarning = components.some((c) => !c.isDeductible);
     if (!hasEarning) {
-      throw new BadRequestException('At least one earning component (isDeductible = false) is required');
+      throw new BadRequestException(
+        'At least one earning component (isDeductible = false) is required',
+      );
     }
 
     for (const component of components) {
       if (component.type === 'PERCENTAGE' && (component.value < 0 || component.value > 100)) {
-        throw new BadRequestException(`Component "${component.name}": PERCENTAGE type value must be between 0 and 100`);
+        throw new BadRequestException(
+          `Component "${component.name}": PERCENTAGE type value must be between 0 and 100`,
+        );
       }
       if (component.type === 'FIXED' && component.value <= 0) {
-        throw new BadRequestException(`Component "${component.name}": FIXED type value must be greater than 0`);
+        throw new BadRequestException(
+          `Component "${component.name}": FIXED type value must be greater than 0`,
+        );
       }
     }
   }

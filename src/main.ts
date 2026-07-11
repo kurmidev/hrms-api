@@ -62,7 +62,10 @@ async function bootstrap() {
       .addTag('Employees', 'Employee Management')
       .addTag('Attendance', 'Attendance & Tracking')
       .addTag('Leave', 'Leave Management')
-      .addTag('Payroll', 'Payroll Processing')
+      .addTag(
+        'Payroll',
+        'Payroll Runs & Entries (salary structure/tax config lives under Organizations)',
+      )
       .addTag('Loans', 'Loan Management')
       .addTag('Incentives', 'Todo & Incentive Engine')
       .addTag('Green Thanks', 'Recognition & Reward')

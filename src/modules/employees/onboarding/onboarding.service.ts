@@ -150,37 +150,60 @@ export class OnboardingService {
     const link = await this.getLink(organizationId, id);
     assertValidTransition(link.status, OnboardingStatus.UNDER_REVIEW);
 
-    return this.transition(link.id, link.status, OnboardingStatus.UNDER_REVIEW, hrUserId, 'HR', 'HR opened submission for review');
+    return this.transition(
+      link.id,
+      link.status,
+      OnboardingStatus.UNDER_REVIEW,
+      hrUserId,
+      'HR',
+      'HR opened submission for review',
+    );
   }
 
-  async requestChanges(organizationId: string, id: string, hrUserId: string, dto: RequestChangesDto) {
+  async requestChanges(
+    organizationId: string,
+    id: string,
+    hrUserId: string,
+    dto: RequestChangesDto,
+  ) {
     const link = await this.getLink(organizationId, id);
     assertValidTransition(link.status, OnboardingStatus.CHANGES_REQUESTED);
 
-    return this.transition(link.id, link.status, OnboardingStatus.CHANGES_REQUESTED, hrUserId, 'HR', dto.notes, {
-      reviewedById: hrUserId,
-      reviewedAt: new Date(),
-      hrNotes: dto.notes,
-    });
+    return this.transition(
+      link.id,
+      link.status,
+      OnboardingStatus.CHANGES_REQUESTED,
+      hrUserId,
+      'HR',
+      dto.notes,
+      {
+        reviewedById: hrUserId,
+        reviewedAt: new Date(),
+        hrNotes: dto.notes,
+      },
+    );
   }
 
   async reject(organizationId: string, id: string, hrUserId: string, dto: RequestChangesDto) {
     const link = await this.getLink(organizationId, id);
     assertValidTransition(link.status, OnboardingStatus.REJECTED);
 
-    return this.transition(link.id, link.status, OnboardingStatus.REJECTED, hrUserId, 'HR', dto.notes, {
-      reviewedById: hrUserId,
-      reviewedAt: new Date(),
-      hrNotes: dto.notes,
-    });
+    return this.transition(
+      link.id,
+      link.status,
+      OnboardingStatus.REJECTED,
+      hrUserId,
+      'HR',
+      dto.notes,
+      {
+        reviewedById: hrUserId,
+        reviewedAt: new Date(),
+        hrNotes: dto.notes,
+      },
+    );
   }
 
-  async approve(
-    organizationId: string,
-    id: string,
-    hrUserId: string,
-    dto: ApproveOnboardingDto,
-  ) {
+  async approve(organizationId: string, id: string, hrUserId: string, dto: ApproveOnboardingDto) {
     const link = await this.getLink(organizationId, id);
     assertValidTransition(link.status, OnboardingStatus.ACTIVATED);
 
@@ -200,7 +223,8 @@ export class OnboardingService {
 
     const details = submissionData.details!;
     const joiningDate = new Date(dto.joiningDate);
-    const employeeStatus = joiningDate <= new Date() ? EmployeeStatus.ACTIVE : EmployeeStatus.PRE_BOARDING;
+    const employeeStatus =
+      joiningDate <= new Date() ? EmployeeStatus.ACTIVE : EmployeeStatus.PRE_BOARDING;
 
     // Temp password
     const firstName = details.firstName ?? 'User';
@@ -228,10 +252,12 @@ export class OnboardingService {
           healthInfo: details.existingHealthIssues
             ? ({ existingConditions: details.existingHealthIssues } as Prisma.InputJsonValue)
             : Prisma.JsonNull,
-          previousEmployment: details.previousEmployment as Prisma.InputJsonValue ?? Prisma.JsonNull,
-          referenceContacts: details.referenceContacts as Prisma.InputJsonValue ?? Prisma.JsonNull,
-          address: details.address as Prisma.InputJsonValue ?? Prisma.JsonNull,
-          emergencyContact: details.emergencyContact as Prisma.InputJsonValue ?? Prisma.JsonNull,
+          previousEmployment:
+            (details.previousEmployment as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+          referenceContacts:
+            (details.referenceContacts as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+          address: (details.address as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+          emergencyContact: (details.emergencyContact as Prisma.InputJsonValue) ?? Prisma.JsonNull,
           bankDetails: {
             bankName: details.bankName,
             accountNumber: details.accountNumber,
@@ -303,11 +329,22 @@ export class OnboardingService {
 
   async revokeLink(organizationId: string, id: string, hrUserId: string) {
     const link = await this.getLink(organizationId, id);
-    if (!(([OnboardingStatus.PENDING, OnboardingStatus.IN_PROGRESS] as OnboardingStatus[]).includes(link.status))) {
+    if (
+      !([OnboardingStatus.PENDING, OnboardingStatus.IN_PROGRESS] as OnboardingStatus[]).includes(
+        link.status,
+      )
+    ) {
       throw new BadRequestException('Only PENDING or IN_PROGRESS links can be revoked');
     }
 
-    return this.transition(link.id, link.status, OnboardingStatus.EXPIRED, hrUserId, 'HR', 'Revoked by HR');
+    return this.transition(
+      link.id,
+      link.status,
+      OnboardingStatus.EXPIRED,
+      hrUserId,
+      'HR',
+      'Revoked by HR',
+    );
   }
 
   // ── Candidate public: repopulate form ────────────────────────────────────
@@ -316,7 +353,15 @@ export class OnboardingService {
     const link = await this.prisma.onboardingLink.findUnique({ where: { token } });
     if (!link) throw new NotFoundException('Invalid onboarding link');
 
-    if (([OnboardingStatus.ACTIVATED, OnboardingStatus.REJECTED, OnboardingStatus.EXPIRED] as OnboardingStatus[]).includes(link.status)) {
+    if (
+      (
+        [
+          OnboardingStatus.ACTIVATED,
+          OnboardingStatus.REJECTED,
+          OnboardingStatus.EXPIRED,
+        ] as OnboardingStatus[]
+      ).includes(link.status)
+    ) {
       throw new GoneException(`This onboarding link is ${link.status.toLowerCase()}`);
     }
 
@@ -325,7 +370,14 @@ export class OnboardingService {
       if (link.expiresAt < new Date()) {
         throw new GoneException('This onboarding link has expired');
       }
-      await this.transition(link.id, link.status, OnboardingStatus.IN_PROGRESS, null, 'CANDIDATE', 'Candidate re-opened link after changes requested');
+      await this.transition(
+        link.id,
+        link.status,
+        OnboardingStatus.IN_PROGRESS,
+        null,
+        'CANDIDATE',
+        'Candidate re-opened link after changes requested',
+      );
     }
 
     return {
@@ -386,7 +438,10 @@ export class OnboardingService {
       });
 
       if (isFirstCall) {
-        await tx.onboardingLink.update({ where: { id: link.id }, data: { status: OnboardingStatus.IN_PROGRESS } });
+        await tx.onboardingLink.update({
+          where: { id: link.id },
+          data: { status: OnboardingStatus.IN_PROGRESS },
+        });
         await tx.onboardingTransition.create({
           data: {
             onboardingLinkId: link.id,
@@ -424,7 +479,7 @@ export class OnboardingService {
 
     const completedSteps = finalSubmit
       ? [...new Set([...(existing.completedSteps ?? []), 'documents'])]
-      : existing.completedSteps ?? [];
+      : (existing.completedSteps ?? []);
 
     const updatedData: SubmissionData = { ...existing, documents: merged, completedSteps };
 
@@ -436,7 +491,10 @@ export class OnboardingService {
 
       if (finalSubmit) {
         assertValidTransition(link.status, OnboardingStatus.SUBMITTED);
-        await tx.onboardingLink.update({ where: { id: link.id }, data: { status: OnboardingStatus.SUBMITTED, usedAt: new Date() } });
+        await tx.onboardingLink.update({
+          where: { id: link.id },
+          data: { status: OnboardingStatus.SUBMITTED, usedAt: new Date() },
+        });
         await tx.onboardingTransition.create({
           data: {
             onboardingLinkId: link.id,
@@ -469,7 +527,14 @@ export class OnboardingService {
         data: { status: to, ...extraLinkData },
       });
       await tx.onboardingTransition.create({
-        data: { onboardingLinkId: linkId, fromStatus: from, toStatus: to, actorId, actorType, notes },
+        data: {
+          onboardingLinkId: linkId,
+          fromStatus: from,
+          toStatus: to,
+          actorId,
+          actorType,
+          notes,
+        },
       });
       return updated;
     });
@@ -491,22 +556,43 @@ export class OnboardingService {
 
   private async validateActivationPayload(organizationId: string, dto: ApproveOnboardingDto) {
     const [dept, designation, roles, payroll, leave] = await Promise.all([
-      this.prisma.department.findFirst({ where: { id: dto.departmentId, organizationId, deletedAt: null } }),
-      this.prisma.designation.findFirst({ where: { id: dto.designationId, departmentId: dto.departmentId, organizationId, deletedAt: null } }),
+      this.prisma.department.findFirst({
+        where: { id: dto.departmentId, organizationId, deletedAt: null },
+      }),
+      this.prisma.designation.findFirst({
+        where: {
+          id: dto.designationId,
+          departmentId: dto.departmentId,
+          organizationId,
+          deletedAt: null,
+        },
+      }),
       this.prisma.role.findMany({ where: { id: { in: dto.roleIds }, organizationId } }),
-      this.prisma.payrollStructure.findFirst({ where: { id: dto.payrollStructureId, organizationId, deletedAt: null } }),
-      this.prisma.leavePolicy.findFirst({ where: { id: dto.leavePolicyId, organizationId, isActive: true, deletedAt: null } }),
+      this.prisma.payrollStructure.findFirst({
+        where: { id: dto.payrollStructureId, organizationId, deletedAt: null },
+      }),
+      this.prisma.leavePolicy.findFirst({
+        where: { id: dto.leavePolicyId, organizationId, isActive: true, deletedAt: null },
+      }),
     ]);
 
     if (!dept) throw new BadRequestException('Department not found in this organization');
-    if (!designation) throw new BadRequestException('Designation not found in the given department');
-    if (roles.length !== dto.roleIds.length) throw new BadRequestException('One or more roles not found in this organization');
+    if (!designation)
+      throw new BadRequestException('Designation not found in the given department');
+    if (roles.length !== dto.roleIds.length)
+      throw new BadRequestException('One or more roles not found in this organization');
     if (!payroll) throw new BadRequestException('Payroll structure not found in this organization');
-    if (!leave) throw new BadRequestException('Leave policy not found or inactive in this organization');
+    if (!leave)
+      throw new BadRequestException('Leave policy not found or inactive in this organization');
 
     if (dto.reportingManagerId) {
       const manager = await this.prisma.employee.findFirst({
-        where: { id: dto.reportingManagerId, organizationId, status: EmployeeStatus.ACTIVE, deletedAt: null },
+        where: {
+          id: dto.reportingManagerId,
+          organizationId,
+          status: EmployeeStatus.ACTIVE,
+          deletedAt: null,
+        },
       });
       if (!manager) throw new BadRequestException('Reporting manager not found or not active');
     }
@@ -514,7 +600,9 @@ export class OnboardingService {
 
   private async resolveEmpCode(organizationId: string, customCode?: string): Promise<string> {
     if (customCode) {
-      const clash = await this.prisma.employee.findFirst({ where: { organizationId, empCode: customCode } });
+      const clash = await this.prisma.employee.findFirst({
+        where: { organizationId, empCode: customCode },
+      });
       if (clash) throw new ConflictException(`empCode ${customCode} is already in use`);
       return customCode;
     }
@@ -527,7 +615,9 @@ export class OnboardingService {
     return `EMP-${String(seq).padStart(5, '0')}`;
   }
 
-  private async buildTempCredentials(firstName: string): Promise<{ tempPassword: string; passwordHash: string }> {
+  private async buildTempCredentials(
+    firstName: string,
+  ): Promise<{ tempPassword: string; passwordHash: string }> {
     const digits = Math.floor(1000 + Math.random() * 9000);
     const prefix = firstName.slice(0, 3).replace(/[^a-zA-Z]/g, 'Usr');
     const tempPassword = `${prefix}@${digits}`;

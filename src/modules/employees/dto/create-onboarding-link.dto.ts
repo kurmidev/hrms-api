@@ -37,27 +37,42 @@ export class CreateOnboardingLinkDto {
   @Type(() => Number)
   expiresInDays?: number;
 
-  @ApiPropertyOptional({ example: 'Rig Operator', description: 'Job title shown read-only on candidate form' })
+  @ApiPropertyOptional({
+    example: 'Rig Operator',
+    description: 'Job title shown read-only on candidate form',
+  })
   @IsString()
   @IsOptional()
   jobTitle?: string;
 
-  @ApiPropertyOptional({ example: 'Operations', description: 'Department name shown read-only on candidate form' })
+  @ApiPropertyOptional({
+    example: 'Operations',
+    description: 'Department name shown read-only on candidate form',
+  })
   @IsString()
   @IsOptional()
   departmentName?: string;
 
-  @ApiPropertyOptional({ example: 'Mumbai Offshore', description: 'Work location shown read-only on candidate form' })
+  @ApiPropertyOptional({
+    example: 'Mumbai Offshore',
+    description: 'Work location shown read-only on candidate form',
+  })
   @IsString()
   @IsOptional()
   workLocation?: string;
 
-  @ApiPropertyOptional({ example: '2026-04-10', description: 'Expected joining date shown read-only on candidate form' })
+  @ApiPropertyOptional({
+    example: '2026-04-10',
+    description: 'Expected joining date shown read-only on candidate form',
+  })
   @IsDateString()
   @IsOptional()
   prefillJoiningDate?: string;
 
-  @ApiPropertyOptional({ enum: EmploymentType, description: 'Employment type shown read-only on candidate form' })
+  @ApiPropertyOptional({
+    enum: EmploymentType,
+    description: 'Employment type shown read-only on candidate form',
+  })
   @IsEnum(EmploymentType)
   @IsOptional()
   prefillEmploymentType?: EmploymentType;

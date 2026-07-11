@@ -25,32 +25,67 @@ const SYSTEM_ROLES = [
     name: 'org_admin',
     description: 'Organization-level admin',
     permissions: [
-      'org:read', 'org:update',
-      'employee:read', 'employee:create', 'employee:update', 'employee:delete',
-      'payroll:read', 'payroll:create', 'payroll:update', 'payroll:run', 'payroll:approve',
-      'leave:read', 'leave:apply', 'leave:approve',
-      'loan:read', 'loan:apply', 'loan:approve',
-      'todo:read', 'todo:create', 'todo:approve',
-      'attendance:read', 'attendance:checkin', 'attendance:correct',
-      'role:read', 'role:create', 'role:update', 'role:delete', 'role:assign',
-      'asset:read', 'asset:assign', 'asset:return',
-      'service_request:read', 'service_request:create', 'service_request:manage',
-      'report:read', 'report:export',
-      'onboarding:manage', 'exit:manage',
-      'user:read', 'user:manage',
-      'profile:read', 'profile:update',
+      'org:read',
+      'org:update',
+      'employee:read',
+      'employee:create',
+      'employee:update',
+      'employee:delete',
+      'payroll:read',
+      'payroll:create',
+      'payroll:update',
+      'payroll:run',
+      'payroll:approve',
+      'leave:read',
+      'leave:apply',
+      'leave:approve',
+      'loan:read',
+      'loan:apply',
+      'loan:approve',
+      'todo:read',
+      'todo:create',
+      'todo:approve',
+      'attendance:read',
+      'attendance:checkin',
+      'attendance:correct',
+      'role:read',
+      'role:create',
+      'role:update',
+      'role:delete',
+      'role:assign',
+      'asset:read',
+      'asset:assign',
+      'asset:return',
+      'service_request:read',
+      'service_request:create',
+      'service_request:manage',
+      'report:read',
+      'report:export',
+      'onboarding:manage',
+      'exit:manage',
+      'user:read',
+      'user:manage',
+      'profile:read',
+      'profile:update',
     ],
   },
   {
     name: 'hr_manager',
     description: 'Manages employee records, leave, onboarding, and HR reports',
     permissions: [
-      'employee:read', 'employee:create', 'employee:update',
-      'leave:read', 'leave:approve',
-      'attendance:read', 'attendance:correct',
-      'onboarding:manage', 'exit:manage',
-      'report:read', 'report:export',
-      'profile:read', 'profile:update',
+      'employee:read',
+      'employee:create',
+      'employee:update',
+      'leave:read',
+      'leave:approve',
+      'attendance:read',
+      'attendance:correct',
+      'onboarding:manage',
+      'exit:manage',
+      'report:read',
+      'report:export',
+      'profile:read',
+      'profile:update',
       'user:read',
     ],
   },
@@ -59,9 +94,15 @@ const SYSTEM_ROLES = [
     description: 'Manages payroll, loans, and financial reports',
     permissions: [
       'employee:read',
-      'payroll:read', 'payroll:create', 'payroll:update', 'payroll:run', 'payroll:approve',
-      'loan:read', 'loan:approve',
-      'report:read', 'report:export',
+      'payroll:read',
+      'payroll:create',
+      'payroll:update',
+      'payroll:run',
+      'payroll:approve',
+      'loan:read',
+      'loan:approve',
+      'report:read',
+      'report:export',
       'profile:read',
     ],
   },
@@ -70,8 +111,10 @@ const SYSTEM_ROLES = [
     description: 'Department-level manager',
     permissions: [
       'employee:read',
-      'leave:read', 'leave:approve',
-      'todo:read', 'todo:approve',
+      'leave:read',
+      'leave:approve',
+      'todo:read',
+      'todo:approve',
       'attendance:read',
       'profile:read',
     ],
@@ -79,30 +122,33 @@ const SYSTEM_ROLES = [
   {
     name: 'field_supervisor',
     description: 'Field operations supervisor',
-    permissions: [
-      'employee:read',
-      'attendance:read',
-      'todo:read', 'todo:approve',
-      'profile:read',
-    ],
+    permissions: ['employee:read', 'attendance:read', 'todo:read', 'todo:approve', 'profile:read'],
   },
   {
     name: 'employee',
     description: 'Standard employee',
     permissions: [
-      'leave:read', 'leave:apply',
-      'todo:read', 'todo:create',
+      'leave:read',
+      'leave:apply',
+      'todo:read',
+      'todo:create',
       'attendance:checkin',
-      'loan:read', 'loan:apply',
-      'profile:read', 'profile:update',
+      'loan:read',
+      'loan:apply',
+      'profile:read',
+      'profile:update',
     ],
   },
   {
     name: 'it_admin',
     description: 'IT administrator',
     permissions: [
-      'asset:read', 'asset:assign', 'asset:return',
-      'service_request:read', 'service_request:create', 'service_request:manage',
+      'asset:read',
+      'asset:assign',
+      'asset:return',
+      'service_request:read',
+      'service_request:create',
+      'service_request:manage',
       'user:read',
       'profile:read',
     ],
@@ -136,8 +182,7 @@ export class PlatformOrganizationsService {
       // 3. Calculate period
       const now = new Date();
       const days =
-        dto.billingCycle === 'MONTHLY' ? 30 :
-        dto.billingCycle === 'QUARTERLY' ? 90 : 365;
+        dto.billingCycle === 'MONTHLY' ? 30 : dto.billingCycle === 'QUARTERLY' ? 90 : 365;
       const periodEnd = new Date(now);
       periodEnd.setDate(periodEnd.getDate() + days);
 
@@ -164,10 +209,12 @@ export class PlatformOrganizationsService {
       const taxPercent = dto.taxPercent ?? 18;
       const dueAfterDays = dto.dueAfterDays ?? 30;
       const amount =
-        dto.billingCycle === 'MONTHLY' ? Number(plan.priceMonthly) :
-        dto.billingCycle === 'QUARTERLY' ? Number(plan.priceQuarterly) :
-        Number(plan.priceYearly);
-      const taxAmount = amount * taxPercent / 100;
+        dto.billingCycle === 'MONTHLY'
+          ? Number(plan.priceMonthly)
+          : dto.billingCycle === 'QUARTERLY'
+            ? Number(plan.priceQuarterly)
+            : Number(plan.priceYearly);
+      const taxAmount = (amount * taxPercent) / 100;
       const totalAmount = amount + taxAmount;
 
       const dueDate = new Date(now);
@@ -206,8 +253,7 @@ export class PlatformOrganizationsService {
       }
 
       // 9. Generate temp password
-      const tempPassword =
-        Math.random().toString(36).slice(-8).toUpperCase();
+      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase();
       const passwordHash = await bcrypt.hash(tempPassword, 10);
 
       // 10. Create admin user

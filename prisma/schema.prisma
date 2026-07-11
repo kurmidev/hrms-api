@@ -871,6 +871,7 @@ model PayrollEntry {
   advanceDeduction     Float    @default(0)
   otherDeductions      Float    @default(0)
   netSalary            Float    @default(0)
+  remarks              String?  @db.Text
   payslipUrl           String?
   status               String   @default("generated")
   createdAt            DateTime @default(now())

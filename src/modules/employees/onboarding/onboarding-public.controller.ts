@@ -33,7 +33,8 @@ export class OnboardingPublicController {
   @Get(':token')
   @ApiOperation({
     summary: 'Repopulate form',
-    description: 'Returns current onboarding state and all previously saved submission data for form repopulation. If status is CHANGES_REQUESTED, auto-transitions to IN_PROGRESS.',
+    description:
+      'Returns current onboarding state and all previously saved submission data for form repopulation. If status is CHANGES_REQUESTED, auto-transitions to IN_PROGRESS.',
   })
   @ApiParam({ name: 'token', description: '48-char hex onboarding token' })
   getForm(@Param('token') token: string) {
@@ -44,13 +45,11 @@ export class OnboardingPublicController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Submit personal + bank details (Step 1)',
-    description: 'Saves personal info and bank details in a single call. Idempotent — can be called again to correct before documents are submitted. Transitions PENDING → IN_PROGRESS on first call.',
+    description:
+      'Saves personal info and bank details in a single call. Idempotent — can be called again to correct before documents are submitted. Transitions PENDING → IN_PROGRESS on first call.',
   })
   @ApiParam({ name: 'token', description: '48-char hex onboarding token' })
-  submitDetails(
-    @Param('token') token: string,
-    @Body() dto: SubmitDetailsDto,
-  ) {
+  submitDetails(@Param('token') token: string, @Body() dto: SubmitDetailsDto) {
     return this.onboardingService.submitDetails(token, dto);
   }
 
@@ -60,7 +59,8 @@ export class OnboardingPublicController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Upload documents + final submit (Step 2)',
-    description: 'Accepts one or more document files with their types. Upload files in batches. Set finalSubmit=true in the form field to trigger SUBMITTED transition (all docs must already be uploaded). Blocked if Step 1 not completed.',
+    description:
+      'Accepts one or more document files with their types. Upload files in batches. Set finalSubmit=true in the form field to trigger SUBMITTED transition (all docs must already be uploaded). Blocked if Step 1 not completed.',
   })
   @ApiBody({
     schema: {
@@ -71,11 +71,16 @@ export class OnboardingPublicController {
           type: 'array',
           items: {
             type: 'string',
-            description: 'Predefined types: AADHAAR, PAN, RESUME, OFFER_LETTER, BANK_PROOF, PHOTO, EDUCATION_CERTIFICATE, EXPERIENCE_CERTIFICATE, BLOOD_GROUP_REPORT',
+            description:
+              'Predefined types: AADHAAR, PAN, RESUME, OFFER_LETTER, BANK_PROOF, PHOTO, EDUCATION_CERTIFICATE, EXPERIENCE_CERTIFICATE, BLOOD_GROUP_REPORT',
           },
           description: 'Parallel array of document type labels matching the uploaded files',
         },
-        finalSubmit: { type: 'string', enum: ['true', 'false'], description: 'Set to true to finalise submission' },
+        finalSubmit: {
+          type: 'string',
+          enum: ['true', 'false'],
+          description: 'Set to true to finalise submission',
+        },
       },
     },
   })

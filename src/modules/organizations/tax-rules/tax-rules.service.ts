@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { paginate, PaginationDto } from '../../../common/dto/pagination.dto';
 import { CreateTaxRuleDto, TaxCalculationType, UpdateTaxRuleDto } from './dto/create-tax-rule.dto';
@@ -80,13 +85,17 @@ export class TaxRulesService {
   }
 
   async findOne(organizationId: string, id: string) {
-    const rule = await this.prisma.taxRule.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const rule = await this.prisma.taxRule.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!rule) throw new NotFoundException('Tax rule not found');
     return rule;
   }
 
   async update(organizationId: string, id: string, dto: UpdateTaxRuleDto) {
-    const rule = await this.prisma.taxRule.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const rule = await this.prisma.taxRule.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!rule) throw new NotFoundException('Tax rule not found');
 
     const calcType = dto.calculationType ?? rule.calculationType;
@@ -104,30 +113,41 @@ export class TaxRulesService {
         ...(dto.calculationType !== undefined && { calculationType: dto.calculationType }),
         ...(dto.applicableOn !== undefined && { applicableOn: dto.applicableOn }),
         ...(dto.isStatutory !== undefined && { isStatutory: dto.isStatutory }),
-        ...(dto.config !== undefined && { config: dto.config as unknown as import('@prisma/client').Prisma.InputJsonValue }),
-        ...(dto.applicabilityRules !== undefined && {
-          applicabilityRules: dto.applicabilityRules as unknown as import('@prisma/client').Prisma.InputJsonValue,
+        ...(dto.config !== undefined && {
+          config: dto.config as unknown as import('@prisma/client').Prisma.InputJsonValue,
         }),
-        ...(dto.effectiveTo !== undefined && { effectiveTo: dto.effectiveTo ? new Date(dto.effectiveTo) : null }),
+        ...(dto.applicabilityRules !== undefined && {
+          applicabilityRules:
+            dto.applicabilityRules as unknown as import('@prisma/client').Prisma.InputJsonValue,
+        }),
+        ...(dto.effectiveTo !== undefined && {
+          effectiveTo: dto.effectiveTo ? new Date(dto.effectiveTo) : null,
+        }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
   }
 
   async setActive(organizationId: string, id: string, isActive: boolean) {
-    const rule = await this.prisma.taxRule.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const rule = await this.prisma.taxRule.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!rule) throw new NotFoundException('Tax rule not found');
     return this.prisma.taxRule.update({ where: { id }, data: { isActive } });
   }
 
   async remove(organizationId: string, id: string) {
-    const rule = await this.prisma.taxRule.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const rule = await this.prisma.taxRule.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!rule) throw new NotFoundException('Tax rule not found');
     return this.prisma.taxRule.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
   async restore(organizationId: string, id: string) {
-    const rule = await this.prisma.taxRule.findFirst({ where: { id, organizationId, deletedAt: { not: null } } });
+    const rule = await this.prisma.taxRule.findFirst({
+      where: { id, organizationId, deletedAt: { not: null } },
+    });
     if (!rule) throw new NotFoundException('Deleted tax rule not found');
     return this.prisma.taxRule.update({ where: { id }, data: { deletedAt: null } });
   }
@@ -135,7 +155,12 @@ export class TaxRulesService {
   async findTrashed(organizationId: string, pagination: PaginationDto) {
     const where = { organizationId, deletedAt: { not: null } };
     const [data, total] = await Promise.all([
-      this.prisma.taxRule.findMany({ where, orderBy: { deletedAt: 'desc' }, skip: pagination.skip, take: pagination.limit }),
+      this.prisma.taxRule.findMany({
+        where,
+        orderBy: { deletedAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
       this.prisma.taxRule.count({ where }),
     ]);
     return paginate(data, total, pagination);
@@ -149,10 +174,16 @@ export class TaxRulesService {
       }
       const empSplit = config['employeeSplit'];
       const errSplit = config['employerSplit'];
-      if (empSplit !== undefined && (typeof empSplit !== 'number' || (empSplit as number) < 0 || (empSplit as number) > 100)) {
+      if (
+        empSplit !== undefined &&
+        (typeof empSplit !== 'number' || (empSplit as number) < 0 || (empSplit as number) > 100)
+      ) {
         throw new BadRequestException('employeeSplit must be 0-100');
       }
-      if (errSplit !== undefined && (typeof errSplit !== 'number' || (errSplit as number) < 0 || (errSplit as number) > 100)) {
+      if (
+        errSplit !== undefined &&
+        (typeof errSplit !== 'number' || (errSplit as number) < 0 || (errSplit as number) > 100)
+      ) {
         throw new BadRequestException('employerSplit must be 0-100');
       }
     } else if (type === TaxCalculationType.FIXED) {

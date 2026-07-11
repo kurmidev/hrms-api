@@ -22,6 +22,10 @@ import { SubscriptionPlansModule } from './modules/subscription-plans/subscripti
 import { PlatformOrganizationsModule } from './modules/platform-organizations/platform-organizations.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { LeaveModule } from './modules/leave/leave.module';
+import { PayrollModule } from './modules/payroll/payroll.module';
+import { LoansModule } from './modules/loans/loans.module';
 
 @Module({
   providers: [
@@ -83,11 +87,11 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     PlatformOrganizationsModule,
     InvoicesModule,
     DashboardModule,
+    AttendanceModule,
+    LeaveModule,
+    PayrollModule,
+    LoansModule,
     // Modules to be added as they are developed
-    // AttendanceModule,
-    // LeaveModule,
-    // PayrollModule,
-    // LoansModule,
     // IncentivesModule,
     // GreenThanksModule,
     // ChatModule,
@@ -105,8 +109,6 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(TenantMiddleware)
-      .forRoutes('*');
+    consumer.apply(TenantMiddleware).forRoutes('*');
   }
 }

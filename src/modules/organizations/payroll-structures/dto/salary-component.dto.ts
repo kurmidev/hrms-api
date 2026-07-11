@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export enum SalaryComponentBaseOn {
   CTC = 'CTC',
@@ -19,7 +28,8 @@ export class SalaryComponentDto {
   type: 'FIXED' | 'VARIABLE' | 'PERCENTAGE';
 
   @ApiProperty({
-    description: 'FIXED: monthly amount in org currency. PERCENTAGE: 0-100 percent of baseOn. VARIABLE: base rate/cap.',
+    description:
+      'FIXED: monthly amount in org currency. PERCENTAGE: 0-100 percent of baseOn. VARIABLE: base rate/cap.',
     example: 40,
   })
   @IsNumber()
@@ -29,17 +39,23 @@ export class SalaryComponentDto {
   @ApiProperty({
     enum: SalaryComponentBaseOn,
     default: SalaryComponentBaseOn.CTC,
-    description: 'For PERCENTAGE type — what the percentage is calculated against. Defaults to CTC.',
+    description:
+      'For PERCENTAGE type — what the percentage is calculated against. Defaults to CTC.',
   })
   @IsIn(['CTC', 'BASIC', 'GROSS'])
   @IsOptional()
   baseOn?: SalaryComponentBaseOn;
 
-  @ApiProperty({ description: 'true = deduction (PF, ESI); false = earning (Basic, HRA)', example: false })
+  @ApiProperty({
+    description: 'true = deduction (PF, ESI); false = earning (Basic, HRA)',
+    example: false,
+  })
   @IsBoolean()
   isDeductible: boolean;
 
-  @ApiPropertyOptional({ description: 'true = statutory component (auto-computed by payroll engine)' })
+  @ApiPropertyOptional({
+    description: 'true = statutory component (auto-computed by payroll engine)',
+  })
   @IsBoolean()
   @IsOptional()
   isStatutory?: boolean;

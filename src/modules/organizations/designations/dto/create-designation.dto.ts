@@ -13,7 +13,8 @@ export class CreateDesignationDto {
   departmentId: string;
 
   @ApiPropertyOptional({
-    description: 'Seniority level: 1 = most senior (CEO/Director), higher number = more junior. 0 = unset.',
+    description:
+      'Seniority level: 1 = most senior (CEO/Director), higher number = more junior. 0 = unset.',
     example: 3,
   })
   @IsInt()

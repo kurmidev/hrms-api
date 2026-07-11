@@ -149,6 +149,32 @@ export function ApiCommonErrorResponses() {
       },
     }),
     ApiResponse({
+      status: 404,
+      description: 'Not Found — Resource does not exist for this organization',
+      schema: {
+        example: {
+          statusCode: 404,
+          timestamp: '2024-01-15T10:30:00.000Z',
+          path: '/api/v1/example/123',
+          method: 'GET',
+          error: 'Resource not found',
+        },
+      },
+    }),
+    ApiResponse({
+      status: 409,
+      description: 'Conflict — Resource already exists or is in an incompatible state',
+      schema: {
+        example: {
+          statusCode: 409,
+          timestamp: '2024-01-15T10:30:00.000Z',
+          path: '/api/v1/example',
+          method: 'POST',
+          error: 'A payroll run for 7/2026 already exists for this organization',
+        },
+      },
+    }),
+    ApiResponse({
       status: 500,
       description: 'Internal Server Error',
       schema: {

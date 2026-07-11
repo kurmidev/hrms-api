@@ -38,13 +38,31 @@ class EmergencyContactDto {
 
 class PreviousEmploymentDto {
   @ApiPropertyOptional({ example: 'ABC Corp' }) @IsString() @IsOptional() lastEmployerName?: string;
-  @ApiPropertyOptional({ example: 'Senior Engineer' }) @IsString() @IsOptional() jobTitleAtLastEmployer?: string;
-  @ApiPropertyOptional({ example: '2022-01-01' }) @IsDateString() @IsOptional() employmentFrom?: string;
-  @ApiPropertyOptional({ example: '2025-12-31' }) @IsDateString() @IsOptional() employmentTo?: string;
+  @ApiPropertyOptional({ example: 'Senior Engineer' })
+  @IsString()
+  @IsOptional()
+  jobTitleAtLastEmployer?: string;
+  @ApiPropertyOptional({ example: '2022-01-01' })
+  @IsDateString()
+  @IsOptional()
+  employmentFrom?: string;
+  @ApiPropertyOptional({ example: '2025-12-31' })
+  @IsDateString()
+  @IsOptional()
+  employmentTo?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() lastManagerName?: string;
-  @ApiPropertyOptional({ example: '9876543210' }) @IsString() @IsOptional() lastManagerContact?: string;
-  @ApiPropertyOptional({ example: 'hr@abc.com' }) @IsString() @IsOptional() hrContactAtPreviousEmployer?: string;
-  @ApiPropertyOptional({ example: 'Better opportunity' }) @IsString() @IsOptional() reasonForLeaving?: string;
+  @ApiPropertyOptional({ example: '9876543210' })
+  @IsString()
+  @IsOptional()
+  lastManagerContact?: string;
+  @ApiPropertyOptional({ example: 'hr@abc.com' })
+  @IsString()
+  @IsOptional()
+  hrContactAtPreviousEmployer?: string;
+  @ApiPropertyOptional({ example: 'Better opportunity' })
+  @IsString()
+  @IsOptional()
+  reasonForLeaving?: string;
 }
 
 class ReferenceContactDto {
@@ -63,7 +81,10 @@ export class SubmitDetailsDto {
   @IsOptional()
   nationality?: string;
 
-  @ApiPropertyOptional({ example: '9876543210', description: 'Personal mobile number of the candidate' })
+  @ApiPropertyOptional({
+    example: '9876543210',
+    description: 'Personal mobile number of the candidate',
+  })
   @IsNumberString()
   @Length(10, 10)
   @IsOptional()
@@ -87,7 +108,10 @@ export class SubmitDetailsDto {
   @IsOptional()
   bloodGroup?: string;
 
-  @ApiPropertyOptional({ example: 'Type 2 Diabetes', description: 'Details of any existing health conditions' })
+  @ApiPropertyOptional({
+    example: 'Type 2 Diabetes',
+    description: 'Details of any existing health conditions',
+  })
   @IsString()
   @IsOptional()
   existingHealthIssues?: string;
@@ -98,7 +122,10 @@ export class SubmitDetailsDto {
   @IsOptional()
   previousEmployment?: PreviousEmploymentDto;
 
-  @ApiPropertyOptional({ type: [ReferenceContactDto], description: 'Up to 2 professional references' })
+  @ApiPropertyOptional({
+    type: [ReferenceContactDto],
+    description: 'Up to 2 professional references',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ReferenceContactDto)
@@ -114,7 +141,9 @@ export class SubmitDetailsDto {
   @IsNotEmpty()
   accountType: string;
 
-  @ApiProperty({ description: 'Candidate must declare that all provided information is true and accurate' })
+  @ApiProperty({
+    description: 'Candidate must declare that all provided information is true and accurate',
+  })
   @IsBoolean()
   @Equals(true, { message: 'You must accept the declaration to submit' })
   declarationAccepted: boolean;

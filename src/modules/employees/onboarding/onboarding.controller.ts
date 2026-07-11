@@ -26,7 +26,11 @@ export class OnboardingController {
 
   @Post()
   @RequirePermissions('employee:create')
-  @ApiOperation({ summary: 'Generate onboarding invite link', description: 'Creates a secure onboarding link and dispatches SMS + email invite to the candidate.' })
+  @ApiOperation({
+    summary: 'Generate onboarding invite link',
+    description:
+      'Creates a secure onboarding link and dispatches SMS + email invite to the candidate.',
+  })
   create(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') hrUserId: string,
@@ -37,7 +41,10 @@ export class OnboardingController {
 
   @Get()
   @RequirePermissions('employee:read')
-  @ApiOperation({ summary: 'List onboarding links', description: 'Paginated list. Filter by ?status=SUBMITTED.' })
+  @ApiOperation({
+    summary: 'List onboarding links',
+    description: 'Paginated list. Filter by ?status=SUBMITTED.',
+  })
   findAll(
     @CurrentUser('organizationId') organizationId: string,
     @Query() query: OnboardingLinkQueryDto,
@@ -49,17 +56,17 @@ export class OnboardingController {
   @RequirePermissions('employee:read')
   @ApiOperation({ summary: 'Get onboarding link detail with transition history' })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
-  findOne(
-    @CurrentUser('organizationId') organizationId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.onboardingService.findLinkById(organizationId, id);
   }
 
   @Post(':id/review')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Mark submission under review', description: 'Transitions SUBMITTED → UNDER_REVIEW.' })
+  @ApiOperation({
+    summary: 'Mark submission under review',
+    description: 'Transitions SUBMITTED → UNDER_REVIEW.',
+  })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
   markUnderReview(
     @CurrentUser('organizationId') organizationId: string,
@@ -72,7 +79,10 @@ export class OnboardingController {
   @Post(':id/request-changes')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Request corrections from candidate', description: 'Transitions UNDER_REVIEW → CHANGES_REQUESTED.' })
+  @ApiOperation({
+    summary: 'Request corrections from candidate',
+    description: 'Transitions UNDER_REVIEW → CHANGES_REQUESTED.',
+  })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
   requestChanges(
     @CurrentUser('organizationId') organizationId: string,
@@ -86,7 +96,10 @@ export class OnboardingController {
   @Post(':id/reject')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Reject onboarding submission', description: 'Transitions UNDER_REVIEW → REJECTED. Terminal state.' })
+  @ApiOperation({
+    summary: 'Reject onboarding submission',
+    description: 'Transitions UNDER_REVIEW → REJECTED. Terminal state.',
+  })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
   reject(
     @CurrentUser('organizationId') organizationId: string,
@@ -102,7 +115,8 @@ export class OnboardingController {
   @RequirePermissions('employee:create')
   @ApiOperation({
     summary: 'Approve + Activate — creates Employee + User in one transaction',
-    description: 'Combined approve and activate. HR must supply all 5 system assignments (department, designation, roles, payroll structure, leave policy). Creates the Employee and User records atomically, then sends the welcome email with temp credentials.',
+    description:
+      'Combined approve and activate. HR must supply all 5 system assignments (department, designation, roles, payroll structure, leave policy). Creates the Employee and User records atomically, then sends the welcome email with temp credentials.',
   })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
   approve(
@@ -117,7 +131,10 @@ export class OnboardingController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('employee:delete')
-  @ApiOperation({ summary: 'Revoke onboarding link', description: 'Marks a PENDING or IN_PROGRESS link as EXPIRED.' })
+  @ApiOperation({
+    summary: 'Revoke onboarding link',
+    description: 'Marks a PENDING or IN_PROGRESS link as EXPIRED.',
+  })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
   revoke(
     @CurrentUser('organizationId') organizationId: string,

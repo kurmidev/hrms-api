@@ -14,7 +14,10 @@ export class OrganizationsController {
 
   @Get()
   @RequirePermissions('org:read')
-  @ApiOperation({ summary: 'Get organization profile', description: 'Returns the profile of the current organization.' })
+  @ApiOperation({
+    summary: 'Get organization profile',
+    description: 'Returns the profile of the current organization.',
+  })
   @ApiResponse({ status: 200, description: 'Organization profile', type: OrganizationResponseDto })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 403, description: 'Missing permission: org:read' })
@@ -24,7 +27,11 @@ export class OrganizationsController {
 
   @Put()
   @RequirePermissions('org:update')
-  @ApiOperation({ summary: 'Update organization profile', description: 'Updates the organization name, contact details, or logo URL. Slug and active status cannot be changed here.' })
+  @ApiOperation({
+    summary: 'Update organization profile',
+    description:
+      'Updates the organization name, contact details, or logo URL. Slug and active status cannot be changed here.',
+  })
   @ApiResponse({ status: 200, description: 'Organization updated', type: OrganizationResponseDto })
   @ApiResponse({ status: 400, description: 'Validation error or email collision' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })

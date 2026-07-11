@@ -69,7 +69,12 @@ export class DesignationsService {
         payrollStructure: { select: { id: true, name: true } },
         _count: { select: { employees: true } },
       },
-      orderBy: [{ department: { hierarchyLevel: 'asc' } }, { department: { name: 'asc' } }, { level: 'asc' }, { name: 'asc' }],
+      orderBy: [
+        { department: { hierarchyLevel: 'asc' } },
+        { department: { name: 'asc' } },
+        { level: 'asc' },
+        { name: 'asc' },
+      ],
     });
     return data.map((d) => this.toResponse(d));
   }
@@ -88,7 +93,9 @@ export class DesignationsService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateDesignationDto) {
-    const designation = await this.prisma.designation.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const designation = await this.prisma.designation.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!designation) throw new NotFoundException('Designation not found');
 
     if (dto.departmentId && dto.departmentId !== designation.departmentId) {
@@ -105,7 +112,9 @@ export class DesignationsService {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.departmentId !== undefined && { departmentId: dto.departmentId }),
         ...(dto.level !== undefined && { level: dto.level }),
-        ...(dto.payrollStructureId !== undefined && { payrollStructureId: dto.payrollStructureId ?? null }),
+        ...(dto.payrollStructureId !== undefined && {
+          payrollStructureId: dto.payrollStructureId ?? null,
+        }),
       },
       include: {
         department: { select: { id: true, name: true } },
@@ -133,7 +142,9 @@ export class DesignationsService {
   }
 
   async restore(organizationId: string, id: string) {
-    const designation = await this.prisma.designation.findFirst({ where: { id, organizationId, deletedAt: { not: null } } });
+    const designation = await this.prisma.designation.findFirst({
+      where: { id, organizationId, deletedAt: { not: null } },
+    });
     if (!designation) throw new NotFoundException('Deleted designation not found');
     return this.prisma.designation.update({ where: { id }, data: { deletedAt: null } });
   }
@@ -141,7 +152,12 @@ export class DesignationsService {
   async findTrashed(organizationId: string, pagination: PaginationDto) {
     const where = { organizationId, deletedAt: { not: null } };
     const [data, total] = await Promise.all([
-      this.prisma.designation.findMany({ where, orderBy: { deletedAt: 'desc' }, skip: pagination.skip, take: pagination.limit }),
+      this.prisma.designation.findMany({
+        where,
+        orderBy: { deletedAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
       this.prisma.designation.count({ where }),
     ]);
     return paginate(data, total, pagination);
@@ -178,13 +194,17 @@ export class DesignationsService {
   }
 
   private async verifyDeptBelongsToOrg(departmentId: string, organizationId: string) {
-    const dept = await this.prisma.department.findFirst({ where: { id: departmentId, organizationId, deletedAt: null } });
+    const dept = await this.prisma.department.findFirst({
+      where: { id: departmentId, organizationId, deletedAt: null },
+    });
     if (!dept) throw new BadRequestException('Department not found in this organization');
     return dept;
   }
 
   private async verifyPayrollStructure(payrollStructureId: string, organizationId: string) {
-    const ps = await this.prisma.payrollStructure.findFirst({ where: { id: payrollStructureId, organizationId, deletedAt: null } });
+    const ps = await this.prisma.payrollStructure.findFirst({
+      where: { id: payrollStructureId, organizationId, deletedAt: null },
+    });
     if (!ps) throw new BadRequestException('Payroll structure not found in this organization');
     return ps;
   }

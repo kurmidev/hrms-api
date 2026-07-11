@@ -7,7 +7,10 @@ export class PatchEmployeeStatusDto {
   @IsEnum(EmployeeStatus)
   status: EmployeeStatus;
 
-  @ApiPropertyOptional({ description: 'Required when transitioning to SUSPENDED or EXITED', example: 'Voluntary resignation' })
+  @ApiPropertyOptional({
+    description: 'Required when transitioning to SUSPENDED or EXITED',
+    example: 'Voluntary resignation',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)

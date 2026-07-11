@@ -45,7 +45,8 @@ export class AuthUserDto {
 
 export class AuthResponseDto {
   @ApiProperty({
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX3V1aWQiLCJlbWFpbCI6ImZpbmFuY2VAaWdyZWVudGVjLmluIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjE3MTAwMDA5MDB9.signature',
+    example:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX3V1aWQiLCJlbWFpbCI6ImZpbmFuY2VAaWdyZWVudGVjLmluIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjE3MTAwMDA5MDB9.signature',
     description: 'JWT access token — valid for 15 minutes',
   })
   accessToken: string;

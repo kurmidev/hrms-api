@@ -27,9 +27,7 @@ export class BillingScheduler {
         data: { status: 'PAST_DUE' },
       });
 
-      this.logger.log(
-        `Payment reminder: ${invoice.organization.email} - ${invoice.invoiceNumber}`,
-      );
+      this.logger.log(`Payment reminder: ${invoice.organization.email} - ${invoice.invoiceNumber}`);
     }
   }
 
@@ -68,8 +66,7 @@ export class BillingScheduler {
 
     for (const sub of subs) {
       const days =
-        sub.billingCycle === 'MONTHLY' ? 30 :
-        sub.billingCycle === 'QUARTERLY' ? 90 : 365;
+        sub.billingCycle === 'MONTHLY' ? 30 : sub.billingCycle === 'QUARTERLY' ? 90 : 365;
 
       const periodStart = new Date(sub.nextBillingDate);
       const periodEnd = new Date(periodStart);
@@ -81,9 +78,11 @@ export class BillingScheduler {
       const invoiceNumber = `INV-${year}-${String(invoiceCount + 1).padStart(5, '0')}`;
 
       const amount =
-        sub.billingCycle === 'MONTHLY' ? Number(sub.plan.priceMonthly) :
-        sub.billingCycle === 'QUARTERLY' ? Number(sub.plan.priceQuarterly) :
-        Number(sub.plan.priceYearly);
+        sub.billingCycle === 'MONTHLY'
+          ? Number(sub.plan.priceMonthly)
+          : sub.billingCycle === 'QUARTERLY'
+            ? Number(sub.plan.priceQuarterly)
+            : Number(sub.plan.priceYearly);
       const taxAmount = amount * 0.18;
       const totalAmount = amount + taxAmount;
 

@@ -28,10 +28,14 @@ import { UploadDocumentDto } from './dto/upload-document.dto';
 
 const VALID_STATUS_TRANSITIONS: Record<EmployeeStatus, EmployeeStatus[]> = {
   [EmployeeStatus.PRE_BOARDING]: [EmployeeStatus.ACTIVE, EmployeeStatus.EXITED],
-  [EmployeeStatus.ACTIVE]:       [EmployeeStatus.ON_LEAVE, EmployeeStatus.SUSPENDED, EmployeeStatus.EXITED],
-  [EmployeeStatus.ON_LEAVE]:     [EmployeeStatus.ACTIVE, EmployeeStatus.EXITED],
-  [EmployeeStatus.SUSPENDED]:    [EmployeeStatus.ACTIVE, EmployeeStatus.EXITED],
-  [EmployeeStatus.EXITED]:       [],
+  [EmployeeStatus.ACTIVE]: [
+    EmployeeStatus.ON_LEAVE,
+    EmployeeStatus.SUSPENDED,
+    EmployeeStatus.EXITED,
+  ],
+  [EmployeeStatus.ON_LEAVE]: [EmployeeStatus.ACTIVE, EmployeeStatus.EXITED],
+  [EmployeeStatus.SUSPENDED]: [EmployeeStatus.ACTIVE, EmployeeStatus.EXITED],
+  [EmployeeStatus.EXITED]: [],
 };
 
 const REASON_REQUIRED_TRANSITIONS: Array<[EmployeeStatus, EmployeeStatus]> = [
@@ -71,9 +75,18 @@ export class EmployeesService {
         : Promise.resolve(true),
     ]);
 
-    if (!dept) throw new BadRequestException(`Department ${dto.departmentId} not found in this organization`);
-    if (!designation) throw new BadRequestException(`Designation ${dto.designationId} not found in this organization`);
-    if (!manager) throw new BadRequestException(`Reporting manager ${dto.reportingManagerId} not found in this organization`);
+    if (!dept)
+      throw new BadRequestException(
+        `Department ${dto.departmentId} not found in this organization`,
+      );
+    if (!designation)
+      throw new BadRequestException(
+        `Designation ${dto.designationId} not found in this organization`,
+      );
+    if (!manager)
+      throw new BadRequestException(
+        `Reporting manager ${dto.reportingManagerId} not found in this organization`,
+      );
 
     // Check subscription employee limit
     const org = await this.prisma.organization.findUnique({
@@ -234,7 +247,13 @@ export class EmployeesService {
         payrollStructure: { select: { id: true, name: true } },
         leavePolicy: { select: { id: true, name: true } },
         user: {
-          select: { id: true, email: true, isActive: true, mustChangePassword: true, lastLoginAt: true },
+          select: {
+            id: true,
+            email: true,
+            isActive: true,
+            mustChangePassword: true,
+            lastLoginAt: true,
+          },
         },
       },
     });
@@ -243,7 +262,9 @@ export class EmployeesService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateEmployeeDto, updatedById: string) {
-    const employee = await this.prisma.employee.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!employee) throw new NotFoundException('Employee not found');
 
     if (dto.departmentId) {
@@ -251,7 +272,10 @@ export class EmployeesService {
         where: { id: dto.departmentId, organizationId, deletedAt: null },
         select: { id: true },
       });
-      if (!dept) throw new BadRequestException(`Department ${dto.departmentId} not found in this organization`);
+      if (!dept)
+        throw new BadRequestException(
+          `Department ${dto.departmentId} not found in this organization`,
+        );
     }
 
     if (dto.designationId) {
@@ -259,7 +283,10 @@ export class EmployeesService {
         where: { id: dto.designationId, organizationId, deletedAt: null },
         select: { id: true },
       });
-      if (!desig) throw new BadRequestException(`Designation ${dto.designationId} not found in this organization`);
+      if (!desig)
+        throw new BadRequestException(
+          `Designation ${dto.designationId} not found in this organization`,
+        );
     }
 
     if (dto.reportingManagerId) {
@@ -267,7 +294,10 @@ export class EmployeesService {
         where: { id: dto.reportingManagerId, organizationId, deletedAt: null },
         select: { id: true },
       });
-      if (!mgr) throw new BadRequestException(`Reporting manager ${dto.reportingManagerId} not found in this organization`);
+      if (!mgr)
+        throw new BadRequestException(
+          `Reporting manager ${dto.reportingManagerId} not found in this organization`,
+        );
     }
 
     return this.prisma.employee.update({
@@ -283,7 +313,9 @@ export class EmployeesService {
         ...(dto.leavePolicyId !== undefined && { leavePolicyId: dto.leavePolicyId }),
         ...(dto.employmentType !== undefined && { employmentType: dto.employmentType }),
         ...(dto.joiningDate !== undefined && { joiningDate: new Date(dto.joiningDate) }),
-        ...(dto.probationEndDate !== undefined && { probationEndDate: new Date(dto.probationEndDate) }),
+        ...(dto.probationEndDate !== undefined && {
+          probationEndDate: new Date(dto.probationEndDate),
+        }),
         ...(dto.reportingManagerId !== undefined && { reportingManagerId: dto.reportingManagerId }),
         ...(dto.dateOfBirth !== undefined && { dateOfBirth: new Date(dto.dateOfBirth) }),
         ...(dto.gender !== undefined && { gender: dto.gender }),
@@ -295,7 +327,12 @@ export class EmployeesService {
     });
   }
 
-  async patchStatus(organizationId: string, id: string, dto: PatchEmployeeStatusDto, updatedById: string) {
+  async patchStatus(
+    organizationId: string,
+    id: string,
+    dto: PatchEmployeeStatusDto,
+    updatedById: string,
+  ) {
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId, deletedAt: null },
       include: {
@@ -306,7 +343,9 @@ export class EmployeesService {
 
     const allowed = VALID_STATUS_TRANSITIONS[employee.status];
     if (!allowed.includes(dto.status)) {
-      throw new BadRequestException(`Transition from ${employee.status} to ${dto.status} is not permitted`);
+      throw new BadRequestException(
+        `Transition from ${employee.status} to ${dto.status} is not permitted`,
+      );
     }
 
     const needsReason = REASON_REQUIRED_TRANSITIONS.some(
@@ -337,15 +376,22 @@ export class EmployeesService {
   }
 
   async remove(organizationId: string, id: string, updatedById: string) {
-    const employee = await this.prisma.employee.findFirst({ where: { id, organizationId, deletedAt: null } });
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
     if (!employee) throw new NotFoundException('Employee not found');
 
-    await this.prisma.employee.update({ where: { id }, data: { deletedAt: new Date(), updatedById } });
+    await this.prisma.employee.update({
+      where: { id },
+      data: { deletedAt: new Date(), updatedById },
+    });
     return { deleted: true, message: `Employee ${employee.empCode} deleted successfully` };
   }
 
   async restore(organizationId: string, id: string, updatedById: string) {
-    const employee = await this.prisma.employee.findFirst({ where: { id, organizationId, deletedAt: { not: null } } });
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId, deletedAt: { not: null } },
+    });
     if (!employee) throw new NotFoundException('Deleted employee not found');
 
     return this.prisma.employee.update({ where: { id }, data: { deletedAt: null, updatedById } });
@@ -354,14 +400,27 @@ export class EmployeesService {
   async findTrashed(organizationId: string, query: EmployeeQueryDto) {
     const where: Prisma.EmployeeWhereInput = { organizationId, deletedAt: { not: null } };
     const [data, total] = await Promise.all([
-      this.prisma.employee.findMany({ where, orderBy: { deletedAt: 'desc' }, skip: query.skip, take: query.limit }),
+      this.prisma.employee.findMany({
+        where,
+        orderBy: { deletedAt: 'desc' },
+        skip: query.skip,
+        take: query.limit,
+      }),
       this.prisma.employee.count({ where }),
     ]);
     return paginate(data, total, query);
   }
 
-  async updateBankDetails(organizationId: string, id: string, dto: UpdateBankDetailsDto, updatedById: string) {
-    const employee = await this.prisma.employee.findFirst({ where: { id, organizationId, deletedAt: null }, select: { id: true, empCode: true } });
+  async updateBankDetails(
+    organizationId: string,
+    id: string,
+    dto: UpdateBankDetailsDto,
+    updatedById: string,
+  ) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      select: { id: true, empCode: true },
+    });
     if (!employee) throw new NotFoundException('Employee not found');
 
     return this.prisma.employee.update({
@@ -371,8 +430,16 @@ export class EmployeesService {
     });
   }
 
-  async updateEmergencyContact(organizationId: string, id: string, dto: UpdateEmergencyContactDto, updatedById: string) {
-    const employee = await this.prisma.employee.findFirst({ where: { id, organizationId, deletedAt: null }, select: { id: true, empCode: true } });
+  async updateEmergencyContact(
+    organizationId: string,
+    id: string,
+    dto: UpdateEmergencyContactDto,
+    updatedById: string,
+  ) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      select: { id: true, empCode: true },
+    });
     if (!employee) throw new NotFoundException('Employee not found');
 
     return this.prisma.employee.update({
@@ -453,7 +520,14 @@ export class EmployeesService {
   async getSubordinates(organizationId: string, id: string, depth = 5) {
     const root = await this.prisma.employee.findFirst({
       where: { id, organizationId, deletedAt: null },
-      select: { id: true, empCode: true, firstName: true, lastName: true, department: { select: { name: true } }, designation: { select: { name: true } } },
+      select: {
+        id: true,
+        empCode: true,
+        firstName: true,
+        lastName: true,
+        department: { select: { name: true } },
+        designation: { select: { name: true } },
+      },
     });
     if (!root) throw new NotFoundException('Employee not found');
 
@@ -540,7 +614,8 @@ export class EmployeesService {
       include: { user: { select: { id: true, email: true } } },
     });
     if (!employee) throw new NotFoundException('Employee not found');
-    if (!employee.user) throw new BadRequestException('Employee does not have a linked user account');
+    if (!employee.user)
+      throw new BadRequestException('Employee does not have a linked user account');
 
     const token = crypto.randomBytes(32).toString('hex');
     await this.redis.set(`pwd-reset:${token}`, employee.user.id, PASSWORD_RESET_TTL_SECONDS);

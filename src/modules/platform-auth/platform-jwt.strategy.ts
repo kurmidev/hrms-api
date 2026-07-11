@@ -19,7 +19,11 @@ export class PlatformJwtStrategy extends PassportStrategy(Strategy, 'platform-jw
     private readonly prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: (req: any) => {
+        const raw = req.headers['platform-authorization'] as string;
+        if (!raw) return null;
+        return raw.startsWith('Bearer ') ? raw.slice(7) : raw;
+      },
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('PLATFORM_JWT_SECRET') || 'platform-secret',
     });

@@ -37,5 +37,7 @@ export async function resolveEmpCode(
     if (!taken) return candidate;
   }
 
-  throw new ConflictException('Unable to generate a unique employee code after retries. Please try again.');
+  throw new ConflictException(
+    'Unable to generate a unique employee code after retries. Please try again.',
+  );
 }

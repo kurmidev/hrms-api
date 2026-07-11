@@ -31,7 +31,11 @@ export enum TaxApplicableOn {
 
 export class TaxSlabDto {
   @ApiProperty({ example: 0 }) @IsNumber() @Min(0) fromAmount: number;
-  @ApiProperty({ example: 250000, nullable: true }) @IsNumber() @Min(0) @IsOptional() toAmount?: number;
+  @ApiProperty({ example: 250000, nullable: true })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  toAmount?: number;
   @ApiPropertyOptional({ example: 10 }) @IsNumber() @Min(0) @IsOptional() rate?: number;
   @ApiPropertyOptional({ example: 500 }) @IsNumber() @Min(0) @IsOptional() fixedAmount?: number;
 }
@@ -68,13 +72,19 @@ export class CreateTaxRuleDto {
   @MaxLength(100)
   name: string;
 
-  @ApiPropertyOptional({ example: 'PF', description: 'Short identifier (e.g. PF, ESI, STATE_CESS)' })
+  @ApiPropertyOptional({
+    example: 'PF',
+    description: 'Short identifier (e.g. PF, ESI, STATE_CESS)',
+  })
   @IsString()
   @IsOptional()
   @MaxLength(20)
   code?: string;
 
-  @ApiProperty({ example: 'PF', description: 'User-defined tax category (PF, ESI, PT, TDS, or any custom value)' })
+  @ApiProperty({
+    example: 'PF',
+    description: 'User-defined tax category (PF, ESI, PT, TDS, or any custom value)',
+  })
   @IsString()
   @MinLength(1)
   @MaxLength(50)
@@ -88,7 +98,10 @@ export class CreateTaxRuleDto {
   @IsEnum(TaxApplicableOn)
   applicableOn: TaxApplicableOn;
 
-  @ApiPropertyOptional({ default: false, description: 'Mark true for statutory deductions like PF, ESI, PT, TDS' })
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Mark true for statutory deductions like PF, ESI, PT, TDS',
+  })
   @IsBoolean()
   @IsOptional()
   isStatutory?: boolean;
@@ -102,7 +115,8 @@ export class CreateTaxRuleDto {
   config: Record<string, unknown>;
 
   @ApiPropertyOptional({
-    description: 'Restrict applicability by employment type, designation level range, or salary ceiling',
+    description:
+      'Restrict applicability by employment type, designation level range, or salary ceiling',
   })
   @IsObject()
   @IsOptional()
@@ -128,8 +142,14 @@ export class CreateTaxRuleDto {
 export class UpdateTaxRuleDto {
   @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(100) name?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(20) code?: string;
-  @ApiPropertyOptional({ enum: TaxCalculationType }) @IsEnum(TaxCalculationType) @IsOptional() calculationType?: TaxCalculationType;
-  @ApiPropertyOptional({ enum: TaxApplicableOn }) @IsEnum(TaxApplicableOn) @IsOptional() applicableOn?: TaxApplicableOn;
+  @ApiPropertyOptional({ enum: TaxCalculationType })
+  @IsEnum(TaxCalculationType)
+  @IsOptional()
+  calculationType?: TaxCalculationType;
+  @ApiPropertyOptional({ enum: TaxApplicableOn })
+  @IsEnum(TaxApplicableOn)
+  @IsOptional()
+  applicableOn?: TaxApplicableOn;
   @ApiPropertyOptional() @IsBoolean() @IsOptional() isStatutory?: boolean;
   @ApiPropertyOptional() @IsObject() @IsOptional() config?: Record<string, unknown>;
   @ApiPropertyOptional() @IsObject() @IsOptional() applicabilityRules?: ApplicabilityRulesDto;
