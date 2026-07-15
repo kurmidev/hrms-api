@@ -16,6 +16,7 @@ import { EmployeeStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
 import { RedisService } from '../../redis/redis.service';
+import { ChatService } from '../chat/chat.service';
 import { paginate } from '../../common/dto/pagination.dto';
 import { resolveEmpCode } from './helpers/emp-code.helper';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -53,6 +54,7 @@ export class EmployeesService {
     private readonly files: FilesService,
     private readonly redis: RedisService,
     private readonly config: ConfigService,
+    private readonly chatService: ChatService,
     @InjectQueue('employees') private readonly employeesQueue: Queue,
   ) {}
 
@@ -370,6 +372,10 @@ export class EmployeesService {
         empCode: employee.empCode,
         loginUrl: `${frontendUrl}/login`,
       });
+    }
+
+    if (dto.status === EmployeeStatus.EXITED || dto.status === EmployeeStatus.SUSPENDED) {
+      await this.chatService.revokeAllForEmployee(employee.id);
     }
 
     return updated;

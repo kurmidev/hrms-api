@@ -10,12 +10,14 @@ import { OnboardingService } from './onboarding/onboarding.service';
 import { OnboardingScheduler } from './onboarding/onboarding.scheduler';
 import { OnboardingProcessor } from './jobs/onboarding.processor';
 import { EmployeesProcessor } from './jobs/employees.processor';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
     BullModule.registerQueue({ name: 'onboarding' }),
     BullModule.registerQueue({ name: 'employees' }),
     MulterModule.register({ storage: memoryStorage() }),
+    ChatModule,
   ],
   controllers: [EmployeesController, OnboardingController, OnboardingPublicController],
   providers: [

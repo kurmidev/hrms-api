@@ -7,6 +7,8 @@ import {
 import { Prisma, PayrollRunStatus, LeaveStatus, EmployeeStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoansService } from '../loans/loans.service';
+import { IncentiveLedgerService } from '../incentives/incentive-ledger.service';
+import { GreenThanksService } from '../green-thanks/green-thanks.service';
 import { paginate } from '@common/dto/pagination.dto';
 import { InitiatePayrollRunDto } from './dto/initiate-payroll-run.dto';
 import { QueryPayrollRunDto } from './dto/query-payroll-run.dto';
@@ -32,6 +34,8 @@ export class PayrollService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly loansService: LoansService,
+    private readonly incentiveLedgerService: IncentiveLedgerService,
+    private readonly greenThanksService: GreenThanksService,
   ) {}
 
   // ─── Runs ───────────────────────────────────────────────────────────────────
@@ -94,7 +98,53 @@ export class PayrollService {
     const totalDaysInMonth = this.getTotalDaysInMonth(run.month, run.year);
 
     for (const employee of employees) {
+      // Both the loan (M10) and incentive (M11) accumulate-not-overwrite reads
+      // must happen BEFORE computeGross/upsert, since the incentive component
+      // feeds into gross and the loan deduction feeds into net. A single
+      // existingEntry read is reused for both to avoid fetching it twice.
+      const existingEntry = await this.prisma.payrollEntry.findUnique({
+        where: {
+          payrollRunId_employeeId: { payrollRunId: runId, employeeId: employee.id },
+        },
+        select: { loanDeduction: true, incentiveAmount: true, greenThanksAmount: true },
+      });
+
+      // Incentive released via IncentiveLedgerService (M11). getReleasedIncentiveForPeriod
+      // only returns not-yet-deducted rows, so a second processRun pass for the same
+      // (month, year) always computes 0 here — that is by design (it prevents
+      // re-marking/re-deducting the same ledger row twice). That 0 must never be
+      // written over an already-persisted PayrollEntry.incentiveAmount — doing so
+      // would silently erase a real incentive on re-run. We therefore accumulate
+      // onto whatever is already stored for this entry instead of overwriting it.
+      const incentivePeriod = await this.incentiveLedgerService.getReleasedIncentiveForPeriod(
+        organizationId,
+        employee.id,
+        run.month,
+        run.year,
+      );
+      const incentiveAmount =
+        (existingEntry?.incentiveAmount ?? 0) + incentivePeriod.totalIncentive;
+
+      // Green Thanks (M12) points convert to INR and flow into gross salary via
+      // GreenThanksService. getApprovedGreenThanksForPeriod only returns approved,
+      // not-yet-paid rows, so a second processRun pass for the same (month, year)
+      // always computes 0 here — that is by design (it prevents re-marking the
+      // same GreenThanks row as paid twice). That 0 must never be written over an
+      // already-persisted PayrollEntry.greenThanksAmount — doing so would silently
+      // erase real points on re-run. We therefore accumulate onto whatever is
+      // already stored for this entry instead of overwriting it (see §10 /
+      // known-issues.md accumulate-not-overwrite pattern from Loans/Incentives).
+      const gtPeriod = await this.greenThanksService.getApprovedGreenThanksForPeriod(
+        organizationId,
+        employee.id,
+        run.month,
+        run.year,
+      );
+      const greenThanksAmount = (existingEntry?.greenThanksAmount ?? 0) + gtPeriod.totalAmount;
+
       const components = this.resolveComponents(employee);
+      components.incentive = incentiveAmount;
+      components.greenThanks = greenThanksAmount;
       const grossBreakdown = computeGross(components);
 
       const lopDays = await this.getLopDaysForEmployee(employee.id, run.month, run.year);
@@ -118,12 +168,6 @@ export class PayrollService {
         run.month,
         run.year,
       );
-      const existingEntry = await this.prisma.payrollEntry.findUnique({
-        where: {
-          payrollRunId_employeeId: { payrollRunId: runId, employeeId: employee.id },
-        },
-        select: { loanDeduction: true },
-      });
       const loanDeduction = (existingEntry?.loanDeduction ?? 0) + loanPeriodDeduction.totalEmi;
       // TODO(M11+ advances): advance deductions are a separate future feature; stays 0 until implemented.
       const advanceDeduction = 0;
@@ -207,6 +251,8 @@ export class PayrollService {
       });
 
       await this.loansService.markEmiDeducted(loanPeriodDeduction.scheduleIds, entry.id);
+      await this.incentiveLedgerService.markIncentiveDeducted(incentivePeriod.ledgerIds, entry.id);
+      await this.greenThanksService.markGreenThanksPaid(gtPeriod.greenThanksIds, entry.id);
     }
 
     return this.prisma.payrollRun.update({

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { LoansModule } from '../loans/loans.module';
+import { IncentivesModule } from '../incentives/incentives.module';
+import { GreenThanksModule } from '../green-thanks/green-thanks.module';
 import { PayrollController } from './payroll.controller';
 import { PayrollService } from './payroll.service';
 
@@ -10,7 +12,7 @@ import { PayrollService } from './payroll.service';
 // EmployeesModule pattern (BullModule.registerQueue + a PayrollProcessor
 // @Processor('payroll')) — once async processing is needed for larger orgs.
 @Module({
-  imports: [PrismaModule, LoansModule],
+  imports: [PrismaModule, LoansModule, IncentivesModule, GreenThanksModule],
   controllers: [PayrollController],
   providers: [PayrollService],
   exports: [PayrollService],
