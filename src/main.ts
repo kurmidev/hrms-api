@@ -59,25 +59,49 @@ async function bootstrap() {
       .addBearerAuth()
       .addTag('Auth', 'Authentication & Authorization')
       .addTag('Organizations', 'Organization Management')
+      .addTag('Roles & Permissions', 'RBAC — Role & Permission Management')
       .addTag('Employees', 'Employee Management')
+      .addTag('Onboarding (HR)', 'Employee Onboarding Link Management (HR-facing)')
+      .addTag('Onboarding (Candidate)', 'Employee Onboarding — Public Candidate Flow')
       .addTag('Attendance', 'Attendance & Tracking')
       .addTag('Leave', 'Leave Management')
+      .addTag('Leave Policies', 'Organization Leave Policy Configuration')
       .addTag(
         'Payroll',
         'Payroll Runs & Entries (salary structure/tax config lives under Organizations)',
       )
       .addTag('Loans', 'Loan Management')
       .addTag('Incentives', 'Todo & Incentive Engine')
-      .addTag('Green Thanks', 'Recognition & Reward')
-      .addTag('Chat', 'Internal Communication')
-      .addTag('Notices', 'Announcements & Notices')
-      .addTag('Performance', 'Performance Ratings')
-      .addTag('Service Requests', 'Feedback & Service Requests')
-      .addTag('Assets', 'Asset Management')
-      .addTag('Disciplinary', 'Disciplinary Management')
-      .addTag('Exit', 'Exit Management')
-      .addTag('Reports', 'Reporting & BI')
-      .addTag('Dashboard', 'Dashboard Aggregates')
+      .addTag('Green Thanks', 'Peer-to-Peer Green Thanks Points & Org Configuration')
+      .addTag('Notices', 'Company Notice Board — Publishing, Targeting & Read Receipts')
+      .addTag(
+        'Performance',
+        'Performance Review Cycles & Manager Ratings (upward reporting-chain enforced)',
+      )
+      .addTag(
+        'Chat',
+        'Internal Messaging — Direct/Group/Department Rooms & REST Message History ' +
+          '(real-time delivery is Socket.io on the `/chat` namespace, documented in ChatGateway, not here)',
+      )
+      .addTag(
+        'Service Requests',
+        'Employee HR/IT/Admin/Finance Service Requests, Comments & SLA Tracking',
+      )
+      .addTag('Assets', 'Asset Master, Assignment & Return Lifecycle')
+      .addTag(
+        'Disciplinary',
+        'Disciplinary Memos & Termination-Review Flagging (5+ active memo threshold)',
+      )
+      .addTag(
+        'Exit',
+        'Employee Exit Lifecycle — Initiation, Department Clearance & Final Settlement',
+      )
+      .addTag('Insurance', 'Insurance Policy Master & Employee/Family Enrollment (Approval-Based)')
+      .addTag('Dashboards', 'Dashboard Aggregates')
+      .addTag('Platform Auth', 'Platform-Level Authentication (Super Admin)')
+      .addTag('Platform Organizations', 'Platform-Level Organization Management (Super Admin)')
+      .addTag('Platform Invoices', 'Platform Billing & Invoices')
+      .addTag('Platform Plans', 'Platform Subscription Plans')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

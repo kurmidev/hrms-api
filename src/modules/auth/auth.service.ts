@@ -40,8 +40,20 @@ export class AuthService {
       );
     }
 
+    // IMPORTANT: must `include: { employee: true }`. `AuthController.login`
+    // derives the JWT's `organizationId` claim from `req.user.employee?.organizationId`
+    // (see `auth.controller.ts`). Without this include, `user.employee` is
+    // `undefined` and EVERY password-login JWT silently gets `organizationId: ''`
+    // baked in — which then breaks every controller endpoint that reads the org
+    // id via `@CurrentUser('organizationId')` (JWT-payload-based) rather than
+    // `@OrganizationId()` (X-Organization-ID header-based), e.g. Employees,
+    // Organizations, Roles, Onboarding. This previously caused every one of
+    // those endpoints to silently scope queries to a nonexistent empty-string
+    // org and 404/empty-list instead of erroring loudly. If you add a new
+    // JWT-issuing path here, always include `employee` too.
     const user = await this.prisma.user.findFirst({
       where: { email, isActive: true },
+      include: { employee: { select: { organizationId: true } } },
     });
 
     if (!user) {

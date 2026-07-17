@@ -298,6 +298,44 @@ export class LoansService {
     }
   }
 
+  /**
+   * Consumed by ExitService at settlement time to reference (not recompute) an
+   * employee's outstanding loan balance. Sums the `outstandingBalance` of the
+   * most recent undeducted EMI row per ACTIVE loan (each row's outstandingBalance
+   * already reflects the remaining principal+interest as of that installment).
+   */
+  async getOutstandingBalanceForEmployee(
+    organizationId: string,
+    employeeId: string,
+  ): Promise<number> {
+    if (!organizationId || !employeeId) {
+      throw new BadRequestException('organizationId and employeeId are required');
+    }
+
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, organizationId },
+      select: { id: true },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+
+    const activeLoans = await this.prisma.loanApplication.findMany({
+      where: { employeeId, status: LoanStatus.ACTIVE, employee: { organizationId } },
+      select: { id: true },
+    });
+    if (activeLoans.length === 0) return 0;
+
+    let total = 0;
+    for (const loan of activeLoans) {
+      const nextInstallment = await this.prisma.loanEmiSchedule.findFirst({
+        where: { loanId: loan.id, isDeducted: false },
+        orderBy: [{ emiYear: 'asc' }, { emiMonth: 'asc' }],
+        select: { outstandingBalance: true },
+      });
+      if (nextInstallment) total += nextInstallment.outstandingBalance;
+    }
+    return total;
+  }
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   private async getLoanOrThrow(

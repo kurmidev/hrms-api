@@ -62,7 +62,9 @@ describe('Loans module (e2e)', () => {
       });
       const employeeIds = employees.map((e) => e.id);
 
-      await prisma.loanEmiSchedule.deleteMany({ where: { loan: { employeeId: { in: employeeIds } } } });
+      await prisma.loanEmiSchedule.deleteMany({
+        where: { loan: { employeeId: { in: employeeIds } } },
+      });
       await prisma.loanApplication.deleteMany({ where: { employeeId: { in: employeeIds } } });
       await prisma.payrollEntry.deleteMany({ where: { employeeId: { in: employeeIds } } });
       await prisma.payrollRun.deleteMany({ where: { organizationId } });
@@ -128,7 +130,14 @@ describe('Loans module (e2e)', () => {
       data: {
         organizationId: org.id,
         name: `Structure ${label}`,
-        components: { basic: 30000, hra: 10000, specialAllowance: 0, educationAllowance: 0, travelAllowance: 0, otherAllowances: 0 },
+        components: {
+          basic: 30000,
+          hra: 10000,
+          specialAllowance: 0,
+          educationAllowance: 0,
+          travelAllowance: 0,
+          otherAllowances: 0,
+        },
       },
     });
 
@@ -200,7 +209,13 @@ describe('Loans module (e2e)', () => {
       designationId: designation.id,
       payrollStructureId: payrollStructure.id,
       approverToken: approverLogin.body.data.accessToken,
-      approverPermissions: ['loan:read', 'loan:apply', 'loan:approve', 'payroll:run', 'payroll:read'],
+      approverPermissions: [
+        'loan:read',
+        'loan:apply',
+        'loan:approve',
+        'payroll:run',
+        'payroll:read',
+      ],
       employeeUserId: employeeUser.id,
       employeeId: employee.id,
       employeeToken: employeeLogin.body.data.accessToken,
@@ -368,7 +383,9 @@ describe('Loans module (e2e)', () => {
         const prev = { month: schedule[i - 1].emiMonth, year: schedule[i - 1].emiYear };
         const cur = { month: schedule[i].emiMonth, year: schedule[i].emiYear };
         const expectedNext =
-          prev.month === 12 ? { month: 1, year: prev.year + 1 } : { month: prev.month + 1, year: prev.year };
+          prev.month === 12
+            ? { month: 1, year: prev.year + 1 }
+            : { month: prev.month + 1, year: prev.year };
         expect(cur).toEqual(expectedNext);
       }
     });

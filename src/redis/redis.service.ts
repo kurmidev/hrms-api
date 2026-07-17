@@ -1,15 +1,26 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
-export class RedisService implements OnModuleInit, OnModuleDestroy {
+export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
-  private client: Redis;
+  private readonly client: Redis;
 
-  constructor(private readonly configService: ConfigService) {}
-
-  async onModuleInit() {
+  // NOTE: the ioredis client is constructed here, synchronously in the
+  // constructor — NOT in `onModuleInit`. ioredis auto-connects on
+  // instantiation, so there is no async work to defer. This matters because
+  // other providers (e.g. `ChatGateway`) read `this.client` (via
+  // `createSubscriber()`/`getClient()`) from their OWN `onModuleInit`/gateway
+  // lifecycle hooks, and Nest does NOT guarantee that one provider's
+  // `onModuleInit` runs before another's across module boundaries (it also
+  // runs gateway `afterInit` hooks before ANY `onModuleInit` at all). Relying
+  // on `onModuleInit` here previously caused `this.client` to be `undefined`
+  // when `ChatGateway` tried to use it, crashing the entire app on startup.
+  // Constructing eagerly in the constructor removes the ordering dependency
+  // entirely — DI guarantees this constructor runs before any consumer can
+  // even obtain a reference to this service.
+  constructor(private readonly configService: ConfigService) {
     this.client = new Redis({
       host: this.configService.get<string>('redis.host'),
       port: this.configService.get<number>('redis.port'),

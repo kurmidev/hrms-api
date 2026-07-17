@@ -12,6 +12,11 @@ export class OrganizationResponseDto {
   @ApiPropertyOptional() website: string | null;
   @ApiProperty({ enum: CurrencyCode, default: CurrencyCode.INR }) currency: CurrencyCode;
   @ApiProperty() isActive: boolean;
+  @ApiProperty({
+    default: true,
+    description: 'Whether employees may raise service requests with isAnonymous: true',
+  })
+  allowAnonymousServiceRequests: boolean;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }

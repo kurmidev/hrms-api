@@ -26,6 +26,17 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { LeaveModule } from './modules/leave/leave.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { LoansModule } from './modules/loans/loans.module';
+import { IncentivesModule } from './modules/incentives/incentives.module';
+import { GreenThanksModule } from './modules/green-thanks/green-thanks.module';
+import { NoticesModule } from './modules/notices/notices.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { PerformanceModule } from './modules/performance/performance.module';
+import { ServiceRequestsModule } from './modules/service-requests/service-requests.module';
+import { AssetsModule } from './modules/assets/assets.module';
+import { DisciplinaryModule } from './modules/disciplinary/disciplinary.module';
+import { ExitModule } from './modules/exit/exit.module';
+import { InsuranceModule } from './modules/insurance/insurance.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   providers: [
@@ -91,20 +102,19 @@ import { LoansModule } from './modules/loans/loans.module';
     LeaveModule,
     PayrollModule,
     LoansModule,
+    IncentivesModule,
+    GreenThanksModule,
+    NoticesModule,
+    ChatModule,
+    PerformanceModule,
+    ServiceRequestsModule,
+    AssetsModule,
+    DisciplinaryModule,
+    ExitModule,
+    InsuranceModule,
+    ReportsModule,
     // Modules to be added as they are developed
-    // IncentivesModule,
-    // GreenThanksModule,
-    // ChatModule,
-    // NoticesModule,
-    // PerformanceModule,
-    // ServiceRequestsModule,
-    // AssetsModule,
-    // DisciplinaryModule,
-    // ExitModule,
-    // InsuranceModule,
     // RemindersModule,
-    // ReportsModule,
-    // DashboardModule,
   ],
 })
 export class AppModule implements NestModule {

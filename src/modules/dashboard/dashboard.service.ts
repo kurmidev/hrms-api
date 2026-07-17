@@ -1,7 +1,16 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  AttendanceStatus,
+  EmployeeStatus,
+  LeaveStatus,
+  LoanStatus,
+  ServiceRequestStatus,
+  TodoStatus,
+} from '@prisma/client';
 import { PrismaService } from '@prisma/prisma.service';
 import { CreateDashboardDto } from './dto/create-dashboard.dto';
 import { UpdateDashboardDto } from './dto/update-dashboard.dto';
+import { DashboardKpisDto } from './dto/dashboard-kpis.dto';
 
 interface DefaultWidget {
   widgetType: string;
@@ -256,5 +265,135 @@ export class DashboardService {
     }
 
     return results;
+  }
+
+  // ─── KPIs (M17) ─────────────────────────────────────────────────────────────
+
+  /**
+   * Aggregates the KPI widget values consumed by the frontend WidgetRenderer.
+   * Keys match the `widgetType` strings used in DEFAULT_DASHBOARDS above exactly.
+   */
+  async getKpis(organizationId: string, userId: string): Promise<DashboardKpisDto> {
+    const employeeFilter = { organizationId, deletedAt: null };
+
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+    const [
+      totalEmployees,
+      activeEmployees,
+      onLeaveEmployees,
+      presentLogs,
+      countedLogs,
+      pendingLeave,
+      pendingLoan,
+      openServiceRequests,
+      pendingTodos,
+      latestPayrollRun,
+      openLoans,
+      openAssets,
+      openTickets,
+      user,
+    ] = await Promise.all([
+      this.prisma.employee.count({ where: employeeFilter }),
+      this.prisma.employee.count({ where: { ...employeeFilter, status: EmployeeStatus.ACTIVE } }),
+      this.prisma.employee.count({
+        where: { ...employeeFilter, status: EmployeeStatus.ON_LEAVE },
+      }),
+      this.prisma.attendanceLog.count({
+        where: {
+          employee: employeeFilter,
+          date: { gte: monthStart, lte: now },
+          status: AttendanceStatus.PRESENT,
+        },
+      }),
+      this.prisma.attendanceLog.count({
+        where: {
+          employee: employeeFilter,
+          date: { gte: monthStart, lte: now },
+          status: { notIn: [AttendanceStatus.HOLIDAY, AttendanceStatus.WEEK_OFF] },
+        },
+      }),
+      this.prisma.leaveApplication.count({
+        where: { status: LeaveStatus.PENDING, employee: employeeFilter },
+      }),
+      this.prisma.loanApplication.count({
+        where: { status: LoanStatus.PENDING, employee: employeeFilter },
+      }),
+      this.prisma.serviceRequest.count({
+        where: { organizationId, status: ServiceRequestStatus.OPEN },
+      }),
+      this.prisma.todoTask.count({
+        where: { status: TodoStatus.SUBMITTED, employee: employeeFilter },
+      }),
+      this.prisma.payrollRun.findFirst({
+        where: { organizationId },
+        orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        select: { id: true },
+      }),
+      this.prisma.loanApplication.count({
+        where: { status: LoanStatus.ACTIVE, employee: employeeFilter },
+      }),
+      this.prisma.assetAssignment.count({
+        where: { returnedAt: null, employee: employeeFilter },
+      }),
+      this.prisma.serviceRequest.count({
+        where: { organizationId, status: ServiceRequestStatus.OPEN },
+      }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { employeeId: true } }),
+    ]);
+
+    const payrollTotal = latestPayrollRun
+      ? ((
+          await this.prisma.payrollEntry.aggregate({
+            where: { payrollRunId: latestPayrollRun.id },
+            _sum: { netSalary: true },
+          })
+        )._sum.netSalary ?? 0)
+      : null;
+
+    const employeeId = user?.employeeId ?? null;
+
+    let myLeaveBalance: number | null = null;
+    let myPerformance: number | null = null;
+
+    if (employeeId) {
+      const year = now.getUTCFullYear();
+      const [balanceAgg, latestRating] = await Promise.all([
+        this.prisma.leaveBalance.aggregate({
+          where: { employeeId, year },
+          _sum: { balanceDays: true },
+        }),
+        this.prisma.performanceRating.findFirst({
+          where: { employeeId },
+          orderBy: { submittedAt: 'desc' },
+          select: { rating: true },
+        }),
+      ]);
+      myLeaveBalance = balanceAgg._sum.balanceDays ?? 0;
+      myPerformance = latestRating?.rating ?? null;
+    }
+
+    const pendingApprovalsBreakdown = {
+      leave: pendingLeave,
+      loan: pendingLoan,
+      serviceRequest: openServiceRequests,
+      todo: pendingTodos,
+    };
+
+    return {
+      kpi_total_employees: totalEmployees,
+      kpi_active_employees: activeEmployees,
+      kpi_on_leave: onLeaveEmployees,
+      kpi_attendance_rate: countedLogs > 0 ? Math.round((presentLogs / countedLogs) * 100) : null,
+      kpi_pending_approvals: pendingLeave + pendingLoan + openServiceRequests + pendingTodos,
+      kpi_pending_approvals_breakdown: pendingApprovalsBreakdown,
+      kpi_payroll_total: payrollTotal,
+      kpi_open_loans: openLoans,
+      kpi_open_assets: openAssets,
+      kpi_open_tickets: openTickets,
+      kpi_my_leave_balance: myLeaveBalance,
+      kpi_my_performance: myPerformance,
+    };
   }
 }
