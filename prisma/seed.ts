@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { LeaveType, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -214,6 +214,40 @@ async function seedSubscriptionPlans(prisma: PrismaClient) {
   console.log('Subscription plans seeded');
 }
 
+async function seedDefaultLeavePolicies(prisma: PrismaClient, organizationId: string) {
+  const existingCasual = await prisma.leavePolicy.findFirst({
+    where: { organizationId, leaveType: LeaveType.CASUAL },
+  });
+
+  if (existingCasual) {
+    // Idempotent guard: only backfill maxConsecutiveDays if it was never set,
+    // never overwrite an admin's already-configured value.
+    if (existingCasual.maxConsecutiveDays === null) {
+      await prisma.leavePolicy.update({
+        where: { id: existingCasual.id },
+        data: { maxConsecutiveDays: 1 },
+      });
+      console.log('  Casual leave policy: backfilled maxConsecutiveDays=1');
+    } else {
+      console.log('  Casual leave policy already exists, skipping');
+    }
+    return;
+  }
+
+  await prisma.leavePolicy.create({
+    data: {
+      organizationId,
+      name: 'Casual Leave',
+      leaveType: LeaveType.CASUAL,
+      daysPerYear: 12,
+      maxConsecutiveDays: 1,
+      isLopEligible: true,
+      isActive: true,
+    },
+  });
+  console.log('  Casual leave policy created (maxConsecutiveDays=1)');
+}
+
 async function seedPlatformAdmin(prisma: PrismaClient) {
   const hash = await bcrypt.hash('SuperAdmin@1234', 10);
   await prisma.platformAdmin.upsert({
@@ -303,6 +337,7 @@ async function main() {
     console.log(`  Assigned super_admin role to ${adminUser.email}`);
   }
 
+  await seedDefaultLeavePolicies(prisma, org.id);
   await seedSubscriptionPlans(prisma);
   await seedPlatformAdmin(prisma);
 

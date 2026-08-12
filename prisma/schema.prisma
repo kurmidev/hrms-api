@@ -206,6 +206,7 @@ enum AttendanceStatus {
   ON_LEAVE
   HOLIDAY
   WEEK_OFF
+  ON_DUTY
 }
 
 enum LeaveStatus {
@@ -393,6 +394,8 @@ model Organization {
   subscription      OrganizationSubscription?
   invoices          Invoice[]
   dashboardConfigs  DashboardConfig[]
+  workLocations     WorkLocation[]
+  odRecords         OdRecord[]
 
   @@map("organizations")
 }
@@ -629,6 +632,7 @@ model Employee {
   leaveApplications   LeaveApplication[]
   attendanceLogs      AttendanceLog[]
   liveLocations       LiveLocation[]
+  odRecords           OdRecord[]
   payrollEntries      PayrollEntry[]
   loans               LoanApplication[]
   todos               TodoTask[]
@@ -810,25 +814,27 @@ model Holiday {
 // ─── ATTENDANCE ───────────────────────────────────────────────────────────────
 
 model AttendanceLog {
-  id            String           @id @default(uuid())
-  employeeId    String
-  date          DateTime         @db.Date
-  checkInAt     DateTime?
-  checkOutAt    DateTime?
-  checkInLat    Float?
-  checkInLng    Float?
-  checkOutLat   Float?
-  checkOutLng   Float?
-  source        AttendanceSource @default(MOBILE)
-  status        AttendanceStatus @default(PRESENT)
-  totalHours    Float?
-  overtimeHours Float?
-  approvedBy    String?
-  notes         String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  createdById   String?
-  updatedById   String?
+  id                   String           @id @default(uuid())
+  employeeId           String
+  date                 DateTime         @db.Date
+  checkInAt            DateTime?
+  checkOutAt           DateTime?
+  checkInLat           Float?
+  checkInLng           Float?
+  checkOutLat          Float?
+  checkOutLng          Float?
+  checkInLocationName  String?
+  checkOutLocationName String?
+  source               AttendanceSource @default(MOBILE)
+  status               AttendanceStatus @default(PRESENT)
+  totalHours           Float?
+  overtimeHours        Float?
+  approvedBy           String?
+  notes                String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  createdById          String?
+  updatedById          String?
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
@@ -848,6 +854,59 @@ model LiveLocation {
 
   @@index([employeeId, recordedAt])
   @@map("live_locations")
+}
+
+model WorkLocation {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  lat            Float
+  lng            Float
+  radiusMeters   Float
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  updatedById    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("work_locations")
+}
+
+model OdRecord {
+  id             String   @id @default(uuid())
+  organizationId String
+  employeeId     String
+  date           DateTime @db.Date
+  reason         String?
+  totalMinutes   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  employee     Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  entries      OdLocationEntry[]
+
+  @@unique([employeeId, date])
+  @@map("od_records")
+}
+
+model OdLocationEntry {
+  id           String   @id @default(uuid())
+  odRecordId   String
+  lat          Float
+  lng          Float
+  locationName String?
+  minutes      Int
+  recordedAt   DateTime @default(now())
+
+  odRecord OdRecord @relation(fields: [odRecordId], references: [id], onDelete: Cascade)
+
+  @@map("od_location_entries")
 }
 
 // ─── PAYROLL ──────────────────────────────────────────────────────────────────

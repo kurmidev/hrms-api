@@ -12,6 +12,8 @@ import { PayrollStructuresService } from './payroll-structures/payroll-structure
 import { CurrenciesController } from './currencies/currencies.controller';
 import { LeavePoliciesController } from './leave-policies/leave-policies.controller';
 import { LeavePoliciesService } from './leave-policies/leave-policies.service';
+import { WorkLocationsController } from './work-locations/work-locations.controller';
+import { WorkLocationsService } from './work-locations/work-locations.service';
 
 @Module({
   controllers: [
@@ -22,6 +24,7 @@ import { LeavePoliciesService } from './leave-policies/leave-policies.service';
     TaxRulesController,
     PayrollStructuresController,
     LeavePoliciesController,
+    WorkLocationsController,
   ],
   providers: [
     OrganizationsService,
@@ -30,6 +33,7 @@ import { LeavePoliciesService } from './leave-policies/leave-policies.service';
     TaxRulesService,
     PayrollStructuresService,
     LeavePoliciesService,
+    WorkLocationsService,
   ],
   exports: [
     DepartmentsService,
@@ -37,6 +41,7 @@ import { LeavePoliciesService } from './leave-policies/leave-policies.service';
     TaxRulesService,
     PayrollStructuresService,
     LeavePoliciesService,
+    WorkLocationsService,
   ],
 })
 export class OrganizationsModule {}

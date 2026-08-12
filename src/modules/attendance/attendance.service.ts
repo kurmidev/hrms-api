@@ -7,6 +7,7 @@ import {
 import { AttendanceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '@common/dto/pagination.dto';
+import { WorkLocationsService } from '../organizations/work-locations/work-locations.service';
 import { CheckInDto, LiveLocationDto } from './dto/check-in.dto';
 import { CheckOutDto } from './dto/check-out.dto';
 import { ManualEntryDto } from './dto/manual-entry.dto';
@@ -25,7 +26,10 @@ function startOfDay(date: Date | string): Date {
 
 @Injectable()
 export class AttendanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly workLocationsService: WorkLocationsService,
+  ) {}
 
   private async assertEmployeeInOrg(organizationId: string, employeeId: string) {
     const employee = await this.prisma.employee.findFirst({
@@ -51,6 +55,12 @@ export class AttendanceService {
       );
     }
 
+    const checkInLocationName = await this.workLocationsService.resolveLocationName(
+      organizationId,
+      dto.lat,
+      dto.lng,
+    );
+
     const log = await this.prisma.attendanceLog.create({
       data: {
         employeeId,
@@ -58,6 +68,7 @@ export class AttendanceService {
         checkInAt: timestamp,
         checkInLat: dto.lat,
         checkInLng: dto.lng,
+        checkInLocationName,
         source: dto.source ?? 'MOBILE',
         status: AttendanceStatus.PRESENT,
       },
@@ -88,12 +99,18 @@ export class AttendanceService {
     const totalHours = (timestamp.getTime() - openLog.checkInAt!.getTime()) / MS_PER_HOUR;
     const overtimeHours = Math.max(0, totalHours - STANDARD_WORKDAY_HOURS);
 
+    const checkOutLocationName =
+      dto.lat !== undefined && dto.lng !== undefined
+        ? await this.workLocationsService.resolveLocationName(organizationId, dto.lat, dto.lng)
+        : undefined;
+
     const log = await this.prisma.attendanceLog.update({
       where: { id: openLog.id },
       data: {
         checkOutAt: timestamp,
         checkOutLat: dto.lat,
         checkOutLng: dto.lng,
+        checkOutLocationName,
         totalHours,
         overtimeHours,
       },
