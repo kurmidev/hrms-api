@@ -26,7 +26,7 @@ export class OdController {
   @ApiOperation({
     summary: "Mark on-duty (create today's OD record + first location entry)",
     description:
-      'Creates (or appends to) the caller\'s OD record for today. GPS coordinates are ' +
+      "Creates (or appends to) the caller's OD record for today. GPS coordinates are " +
       'resolved to a work location name offline; minutes are added to the running total.',
   })
   @ApiSuccessResponse(OdResponseDto, 'OD record created/updated', 201)

@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AttendanceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { paginate } from '@common/dto/pagination.dto';
@@ -15,10 +20,15 @@ export interface RequestingUser {
   permissions: string[];
 }
 
+// Builds a UTC-midnight Date for the LOCAL calendar day of `date` — see the
+// identical helper + comment in `attendance.service.ts` (hrms-backend.md rule
+// #19). Using local-midnight `setHours(0,0,0,0)` here broke same-day OD
+// accumulation with a `unique constraint failed` 500 on the second
+// `POST /attendance/od` call of the day, and `?date=` filtering, in any
+// positive-UTC-offset timezone.
 function startOfDay(date: Date | string): Date {
   const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 }
 
 const OD_RECORD_WITH_ENTRIES = {
@@ -102,7 +112,10 @@ export class OdService {
         ).id;
 
     if (existing && dto.reason && !existing.reason) {
-      await this.prisma.odRecord.update({ where: { id: odRecordId }, data: { reason: dto.reason } });
+      await this.prisma.odRecord.update({
+        where: { id: odRecordId },
+        data: { reason: dto.reason },
+      });
     }
 
     await this.prisma.odLocationEntry.create({
@@ -136,7 +149,7 @@ export class OdService {
 
     if (!this.hasReadPermission(currentUser)) {
       if (!currentUser.employeeId || record.employeeId !== currentUser.employeeId) {
-        throw new ForbiddenException('You cannot add a location to another employee\'s OD record');
+        throw new ForbiddenException("You cannot add a location to another employee's OD record");
       }
     }
 

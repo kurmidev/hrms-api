@@ -459,6 +459,25 @@ export class OnboardingService {
 
   // ── Candidate public: upload documents + final submit ───────────────────
 
+  /**
+   * Validates the link + "details step completed" precondition WITHOUT
+   * touching storage. MUST be called by the controller before any file is
+   * uploaded to S3/MinIO — validating business preconditions after the
+   * (slow, external, non-transactional) upload has already happened wastes
+   * the upload and turns unrelated infra failures into misleading 500s
+   * instead of the intended clean 400 (see docs/known-issues.md 2026-08-15).
+   */
+  async assertCanSubmitDocuments(token: string): Promise<void> {
+    const link = await this.prisma.onboardingLink.findUnique({ where: { token } });
+    if (!link) throw new NotFoundException('Invalid onboarding link');
+    this.assertCandidateCanWrite(link.status, link.expiresAt);
+
+    const existing = (link.submissionData ?? { completedSteps: [] }) as unknown as SubmissionData;
+    if (!existing.completedSteps?.includes('details')) {
+      throw new BadRequestException('Please complete personal details before uploading documents');
+    }
+  }
+
   async submitDocuments(
     token: string,
     documents: Array<{ type: string; fileName: string; fileUrl: string }>,

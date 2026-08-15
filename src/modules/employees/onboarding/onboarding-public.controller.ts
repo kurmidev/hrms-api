@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -11,7 +12,14 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../../common/decorators/public.decorator';
 import { OnboardingService } from './onboarding.service';
@@ -19,6 +27,9 @@ import { SubmitDetailsDto } from '../dto/submit-details.dto';
 import { FilesService } from '../../files/files.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
+
+const ALLOWED_DOCUMENT_MIMETYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+const MAX_DOCUMENT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 @ApiTags('Onboarding (Candidate)')
 @Public()
@@ -55,12 +66,36 @@ export class OnboardingPublicController {
 
   @Post(':token/documents')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      limits: { fileSize: MAX_DOCUMENT_FILE_SIZE_BYTES },
+      fileFilter: (req, file, cb) => {
+        if (!ALLOWED_DOCUMENT_MIMETYPES.includes(file.mimetype)) {
+          cb(new BadRequestException('Only PDF, JPG, and PNG files are allowed'), false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Upload documents + final submit (Step 2)',
     description:
-      'Accepts one or more document files with their types. Upload files in batches. Set finalSubmit=true in the form field to trigger SUBMITTED transition (all docs must already be uploaded). Blocked if Step 1 not completed.',
+      'Accepts one or more document files with their types. Upload files in batches. Set finalSubmit=true in the form field to trigger SUBMITTED transition (all docs must already be uploaded). Blocked if Step 1 not completed. Each file is limited to 5 MB and must be application/pdf, image/jpeg, image/jpg, or image/png.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Documents uploaded (and, if finalSubmit=true, onboarding submitted for review).',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request — either a rejected file (disallowed mimetype; only PDF/JPG/PNG accepted) or Step 1 (personal + bank details) has not been completed yet.',
+  })
+  @ApiResponse({
+    status: 413,
+    description: 'A file exceeds the 5 MB per-file size limit.',
   })
   @ApiBody({
     schema: {
@@ -91,6 +126,10 @@ export class OnboardingPublicController {
     @Body('documentTypes') documentTypes: string | string[],
     @Body('finalSubmit') finalSubmit: string,
   ) {
+    // Validate business preconditions (link status, expiry, "details" step
+    // completed) BEFORE touching storage — see OnboardingService.assertCanSubmitDocuments.
+    await this.onboardingService.assertCanSubmitDocuments(token);
+
     const typesArray = Array.isArray(documentTypes) ? documentTypes : [documentTypes];
     const doFinalSubmit = finalSubmit === 'true';
 

@@ -74,7 +74,9 @@ describe('Reports & Dashboard module (e2e)', () => {
       await prisma.leaveApplication.deleteMany({ where: { employeeId: { in: employeeIds } } });
       await prisma.leavePolicy.deleteMany({ where: { organizationId } });
       await prisma.attendanceLog.deleteMany({ where: { employeeId: { in: employeeIds } } });
-      await prisma.loanEmiSchedule.deleteMany({ where: { loan: { employeeId: { in: employeeIds } } } });
+      await prisma.loanEmiSchedule.deleteMany({
+        where: { loan: { employeeId: { in: employeeIds } } },
+      });
       await prisma.loanApplication.deleteMany({ where: { employeeId: { in: employeeIds } } });
       await prisma.payrollEntry.deleteMany({ where: { employeeId: { in: employeeIds } } });
       await prisma.payrollRun.deleteMany({ where: { organizationId } });

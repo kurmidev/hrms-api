@@ -18,10 +18,19 @@ import { QueryAttendanceDto } from './dto/query-attendance.dto';
 const STANDARD_WORKDAY_HOURS = 8;
 const MS_PER_HOUR = 3600000;
 
+// Builds a UTC-midnight Date for the LOCAL calendar day of `date`, matching how
+// MySQL round-trips a `@db.Date` column (the mysql2 driver serializes/deserializes
+// DATE values in UTC). Using `d.setHours(0, 0, 0, 0)` (LOCAL midnight) instead
+// would produce two DIFFERENT instants for "the same day" once one has passed
+// through a write+read cycle in any positive-UTC-offset timezone (e.g. IST,
+// UTC+5:30): local midnight serializes to the PREVIOUS UTC calendar date, so a
+// freshly computed `startOfDay(new Date())` would never match a value already
+// persisted for "today", breaking `@@unique([employeeId, date])` lookups
+// (open check-in/check-out log, OD accumulation) and `?date=` filters. See
+// docs/known-issues.md 2026-08-14 and hrms-backend.md rule #19.
 function startOfDay(date: Date | string): Date {
   const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 }
 
 @Injectable()

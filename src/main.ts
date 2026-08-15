@@ -59,11 +59,13 @@ async function bootstrap() {
       .addBearerAuth()
       .addTag('Auth', 'Authentication & Authorization')
       .addTag('Organizations', 'Organization Management')
+      .addTag('Work Locations', 'Geo-Fenced Work Locations for Offline GPS Check-In/OD Resolution')
       .addTag('Roles & Permissions', 'RBAC — Role & Permission Management')
       .addTag('Employees', 'Employee Management')
       .addTag('Onboarding (HR)', 'Employee Onboarding Link Management (HR-facing)')
       .addTag('Onboarding (Candidate)', 'Employee Onboarding — Public Candidate Flow')
       .addTag('Attendance', 'Attendance & Tracking')
+      .addTag('On Duty', 'On-Duty (Field) Attendance Records & Location Tracking')
       .addTag('Leave', 'Leave Management')
       .addTag('Leave Policies', 'Organization Leave Policy Configuration')
       .addTag(

@@ -9,11 +9,7 @@ import { OdController } from './od/od.controller';
 import { OdService } from './od/od.service';
 
 @Module({
-  imports: [
-    PrismaModule,
-    OrganizationsModule,
-    MulterModule.register({ storage: memoryStorage() }),
-  ],
+  imports: [PrismaModule, OrganizationsModule, MulterModule.register({ storage: memoryStorage() })],
   // NOTE: OdController is registered BEFORE AttendanceController so that
   // GET /attendance/od is matched ahead of AttendanceController's GET /attendance/:id
   // (id="od" collision risk).
