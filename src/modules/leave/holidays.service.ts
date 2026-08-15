@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { paginate, PaginationDto } from '@common/dto/pagination.dto';
+import { paginate } from '@common/dto/pagination.dto';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
+import { QueryHolidaysDto } from './dto/query-holidays.dto';
 
 function startOfDay(date: Date | string): Date {
   const d = new Date(date);
@@ -14,8 +16,26 @@ function startOfDay(date: Date | string): Date {
 export class HolidaysService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(organizationId: string, query: PaginationDto) {
-    const where = { organizationId };
+  async findAll(organizationId: string, query: QueryHolidaysDto) {
+    // The frontend's `HolidaysPage.tsx` (leaveApi.getHolidays(year)) always
+    // sends `?year=`, but this endpoint previously validated against the bare
+    // `PaginationDto` (no `year` field) — with the global ValidationPipe's
+    // whitelist mode, that rejected every real call with a 400 ("property
+    // year should not exist"), and even without the 400 the service ignored
+    // `year` entirely and never filtered by it. Filter using UTC year
+    // boundaries, matching the `Date.UTC`-based storage convention fixed for
+    // `AttendanceLog`/`OdRecord` (known-issues.md §19) — `Holiday.date` uses
+    // the same local-midnight `startOfDay` write path below, so a UTC year
+    // range is the safe, unambiguous way to bound it.
+    const where: Prisma.HolidayWhereInput = {
+      organizationId,
+      ...(query.year && {
+        date: {
+          gte: new Date(Date.UTC(query.year, 0, 1)),
+          lt: new Date(Date.UTC(query.year + 1, 0, 1)),
+        },
+      }),
+    };
     const [data, total] = await Promise.all([
       this.prisma.holiday.findMany({
         where,

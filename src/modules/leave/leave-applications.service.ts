@@ -21,6 +21,9 @@ export class LeaveApplicationsService {
   ) {}
 
   async apply(organizationId: string, employeeId: string, dto: ApplyLeaveDto) {
+    if (!employeeId) {
+      throw new BadRequestException('No employee record found for the current user');
+    }
     const employee = await this.prisma.employee.findFirst({
       where: { id: employeeId, organizationId, deletedAt: null },
       select: { id: true },
@@ -35,6 +38,20 @@ export class LeaveApplicationsService {
     const fromDate = new Date(dto.fromDate);
     const toDate = new Date(dto.toDate);
     const year = fromDate.getFullYear();
+
+    // Policy-shape violations (maxConsecutiveDays) are checked BEFORE the
+    // balance/overlap checks below: this is a structural rule of the policy
+    // itself, independent of the employee's current balance or existing
+    // applications, so it should fail fast with its own specific message
+    // rather than being masked by "Insufficient leave balance" whenever an
+    // employee also happens to have low/zero balance (the common case for a
+    // freshly onboarded employee) — surfacing the wrong reason for the
+    // rejection. See known-issues.md.
+    if (policy.maxConsecutiveDays && dto.days > policy.maxConsecutiveDays) {
+      throw new BadRequestException(
+        `This leave policy allows a maximum of ${policy.maxConsecutiveDays} consecutive days`,
+      );
+    }
 
     const balance = await this.prisma.leaveBalance.findUnique({
       where: {
@@ -55,12 +72,6 @@ export class LeaveApplicationsService {
     if (overlapping) {
       throw new ConflictException(
         'An overlapping leave application already exists for these dates',
-      );
-    }
-
-    if (policy.maxConsecutiveDays && dto.days > policy.maxConsecutiveDays) {
-      throw new BadRequestException(
-        `This leave policy allows a maximum of ${policy.maxConsecutiveDays} consecutive days`,
       );
     }
 
@@ -121,6 +132,16 @@ export class LeaveApplicationsService {
   }
 
   async myApplications(organizationId: string, employeeId: string, query: QueryLeaveDto) {
+    // Guard BEFORE building the Prisma `where`: a falsy `employeeId` (account
+    // with no linked Employee row, e.g. the seeded super_admin) passed as
+    // `employeeId: null` into a filter on a non-nullable String field throws
+    // an uncaught PrismaClientValidationError -> raw 500 instead of a clean
+    // 4xx, breaking the "no employee record" convention used elsewhere in the
+    // codebase (loans, chat, notices, green-thanks, todos, performance,
+    // attendance — see known-issues.md).
+    if (!employeeId) {
+      throw new BadRequestException('No employee record found for the current user');
+    }
     const where: Prisma.LeaveApplicationWhereInput = {
       employeeId,
       employee: { organizationId, deletedAt: null },

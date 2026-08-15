@@ -34,10 +34,25 @@ export class AuthUserDto {
   organizationId: string;
 
   @ApiProperty({
+    example: false,
+    description:
+      'When true, every non-exempt route 403s with MUST_CHANGE_PASSWORD until the user calls ' +
+      'PUT /auth/change-password — the frontend MUST redirect to the forced change-password ' +
+      'screen whenever this is true.',
+  })
+  mustChangePassword: boolean;
+
+  @ApiProperty({
     example: ['employee:read', 'payroll:view', 'leave:apply'],
     type: [String],
   })
   permissions: string[];
+
+  @ApiProperty({
+    example: [{ id: 'role_uuid_789', name: 'hr_manager' }],
+    description: 'All roles assigned to this user (used by the frontend Profile page).',
+  })
+  roles: Array<{ id: string; name: string }>;
 
   @ApiProperty({ type: EmployeeSummaryDto, nullable: true })
   employee: EmployeeSummaryDto | null;

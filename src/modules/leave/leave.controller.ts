@@ -14,7 +14,7 @@ import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { OrganizationId } from '@common/decorators/organization.decorator';
 import { RequirePermissions } from '@common/decorators/permissions.decorator';
-import { PaginationDto } from '@common/dto/pagination.dto';
+import { QueryHolidaysDto } from './dto/query-holidays.dto';
 import { QueryLeaveBalanceDto } from './dto/query-leave-balance.dto';
 import { LeavePoliciesService } from './leave-policies.service';
 import { LeaveBalanceService } from './leave-balance.service';
@@ -172,7 +172,7 @@ export class LeaveController {
   @Get('holidays')
   @RequirePermissions('leave:read')
   @ApiOperation({ summary: 'List organization holidays' })
-  findAllHolidays(@OrganizationId() organizationId: string, @Query() query: PaginationDto) {
+  findAllHolidays(@OrganizationId() organizationId: string, @Query() query: QueryHolidaysDto) {
     return this.holidaysService.findAll(organizationId, query);
   }
 

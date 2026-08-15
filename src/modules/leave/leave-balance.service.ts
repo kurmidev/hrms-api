@@ -65,6 +65,15 @@ export class LeaveBalanceService {
     employeeId: string,
     year: number = new Date().getFullYear(),
   ) {
+    // Guard BEFORE the Prisma call: a falsy `employeeId` (account with no
+    // linked Employee row, e.g. the seeded super_admin) passed as `id: null`
+    // throws an uncaught PrismaClientValidationError -> raw 500 instead of a
+    // clean 4xx, breaking the "no employee record" convention used elsewhere
+    // in the codebase (loans, chat, notices, green-thanks, todos, performance,
+    // attendance — see known-issues.md).
+    if (!employeeId) {
+      throw new BadRequestException('No employee record found for the current user');
+    }
     const employee = await this.prisma.employee.findFirst({
       where: { id: employeeId, organizationId, deletedAt: null },
       select: { id: true },

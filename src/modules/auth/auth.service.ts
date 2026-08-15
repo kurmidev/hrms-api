@@ -40,17 +40,18 @@ export class AuthService {
       );
     }
 
-    // IMPORTANT: must `include: { employee: true }`. `AuthController.login`
-    // derives the JWT's `organizationId` claim from `req.user.employee?.organizationId`
-    // (see `auth.controller.ts`). Without this include, `user.employee` is
-    // `undefined` and EVERY password-login JWT silently gets `organizationId: ''`
-    // baked in — which then breaks every controller endpoint that reads the org
-    // id via `@CurrentUser('organizationId')` (JWT-payload-based) rather than
-    // `@OrganizationId()` (X-Organization-ID header-based), e.g. Employees,
-    // Organizations, Roles, Onboarding. This previously caused every one of
-    // those endpoints to silently scope queries to a nonexistent empty-string
-    // org and 404/empty-list instead of erroring loudly. If you add a new
-    // JWT-issuing path here, always include `employee` too.
+    // IMPORTANT: must `include: { employee: true }` (used as a fallback — see
+    // `auth.controller.ts`'s `login()`, which now derives the JWT's
+    // `organizationId` claim primarily from `req.user.organizationId`, the
+    // User row's own always-populated column, falling back to
+    // `req.user.employee?.organizationId` only if that were ever absent).
+    // Without this include, the fallback would silently resolve to `undefined`
+    // for the small number of callers that still rely on it. If you add a new
+    // JWT-issuing path here, always select `employee` too, and always prefer
+    // `user.organizationId` over `user.employee?.organizationId` as the primary
+    // source — the latter is `null` for any user with no linked Employee row
+    // (e.g. the seeded super_admin account), which previously broke every
+    // `@CurrentUser('organizationId')`-scoped endpoint for that account.
     const user = await this.prisma.user.findFirst({
       where: { email, isActive: true },
       include: { employee: { select: { organizationId: true } } },
@@ -118,6 +119,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         organizationId,
+        mustChangePassword: user.mustChangePassword,
         permissions: [...new Set(permissions)],
         employee: user.employee
           ? {
@@ -127,6 +129,7 @@ export class AuthService {
               lastName: user.employee.lastName,
               department: user.employee.department?.name ?? null,
               designation: user.employee.designation?.name ?? null,
+              profilePhotoUrl: user.employee.profilePhotoUrl ?? null,
             }
           : null,
       },
@@ -183,7 +186,11 @@ export class AuthService {
 
     await this.redis.deleteOtp(phone);
 
-    const organizationId = user.employee?.organizationId ?? '';
+    // Same fix as `AuthController.login()` — prefer `user.organizationId`
+    // (the User row's own always-populated column) over
+    // `user.employee?.organizationId`, which is `null` for any user with no
+    // linked Employee row. See known-issues.md.
+    const organizationId = user.organizationId ?? user.employee?.organizationId ?? '';
     return this.login(user.id, organizationId, ipAddress, userAgent);
   }
 
@@ -238,13 +245,25 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
 
     const permissions = user.userRoles.flatMap((ur) => (ur.role.permissions as string[]) || []);
+    // `roles` is part of the documented `AuthUserDto` shape and the frontend's
+    // `AuthUser` type (`ProfilePage.tsx` reads `user.roles[0]?.name`) — it was
+    // previously omitted from this response entirely, which crashed the whole
+    // Profile page for EVERY user (not just employee-less accounts) with
+    // "Cannot read properties of undefined (reading '0')". Always include it.
+    const roles = user.userRoles.map((ur) => ({ id: ur.role.id, name: ur.role.name }));
 
     return {
       id: user.id,
       email: user.email,
       phone: user.phone,
-      organizationId: user.employee?.organizationId ?? null,
+      // `User.organizationId` is the source of truth (see auth.controller.ts
+      // `login()` and known-issues.md) — do NOT derive from
+      // `user.employee?.organizationId`, which is `null` for any user with no
+      // linked Employee row (e.g. the seeded super_admin account).
+      organizationId: user.organizationId,
+      mustChangePassword: user.mustChangePassword,
       permissions: [...new Set(permissions)],
+      roles,
       employee: user.employee
         ? {
             id: user.employee.id,
@@ -253,6 +272,7 @@ export class AuthService {
             lastName: user.employee.lastName,
             department: user.employee.department?.name ?? null,
             designation: user.employee.designation?.name ?? null,
+            profilePhotoUrl: user.employee.profilePhotoUrl ?? null,
           }
         : null,
     };

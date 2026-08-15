@@ -41,6 +41,16 @@ export class AttendanceService {
   ) {}
 
   private async assertEmployeeInOrg(organizationId: string, employeeId: string) {
+    // Guard BEFORE the Prisma call: a falsy `employeeId` (e.g. an account with
+    // no linked Employee row, like the seeded super_admin) passed as `id: null`
+    // into a `where` filter on a non-nullable String field throws an uncaught
+    // PrismaClientValidationError -> raw 500, instead of the clean 4xx every
+    // sibling "no employee record" guard in the codebase returns (loans, chat,
+    // notices, green-thanks, todos, performance — see known-issues.md). Fail
+    // closed with a clean, documented error instead.
+    if (!employeeId) {
+      throw new BadRequestException('No employee record found for the current user');
+    }
     const employee = await this.prisma.employee.findFirst({
       where: { id: employeeId, organizationId, deletedAt: null },
       select: { id: true },

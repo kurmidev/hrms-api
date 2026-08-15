@@ -94,7 +94,16 @@ export class AuthController {
     },
   })
   async login(@Req() req: Request & { user: any }, @Body() _dto: LoginDto) {
-    const organizationId = req.user.employee?.organizationId ?? '';
+    // IMPORTANT: `User.organizationId` is the source of truth — it is a required,
+    // always-populated column on the `User` model itself. Do NOT derive it from
+    // `req.user.employee?.organizationId`: any user with no linked `Employee` row
+    // (e.g. the seeded super_admin account, or any other pure-admin login) has
+    // `employee: null`, which previously silently baked `organizationId: ''` into
+    // the JWT and broke every `@CurrentUser('organizationId')`-scoped endpoint
+    // (Employees, Organizations, Roles, Onboarding, dashboard KPIs, etc.) for
+    // that account — empty lists/0 counts instead of a loud error. See
+    // known-issues.md and hrms-backend.md §13/§21.
+    const organizationId = req.user.organizationId ?? req.user.employee?.organizationId ?? '';
     return this.authService.login(req.user.id, organizationId, req.ip, req.headers['user-agent']);
   }
 

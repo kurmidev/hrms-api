@@ -3565,6 +3565,779 @@
         ]
       }
     },
+    "/api/v1/work-locations": {
+      "post": {
+        "operationId": "WorkLocationsController_create",
+        "summary": "Create work location",
+        "description": "Creates a named geo-fenced work location used to resolve offline GPS check-in/check-out and OD coordinates to a human-readable name.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkLocationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Work location created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WorkLocationResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Work Locations"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "WorkLocationsController_findAll",
+        "summary": "List work locations (paginated)",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active state",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of work locations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "properties": {
+                            "data": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/WorkLocationResponseDto"
+                              }
+                            },
+                            "meta": {
+                              "properties": {
+                                "total": {
+                                  "type": "number",
+                                  "example": 100
+                                },
+                                "page": {
+                                  "type": "number",
+                                  "example": 1
+                                },
+                                "limit": {
+                                  "type": "number",
+                                  "example": 20
+                                },
+                                "totalPages": {
+                                  "type": "number",
+                                  "example": 5
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Work Locations"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/work-locations/{id}": {
+      "get": {
+        "operationId": "WorkLocationsController_findOne",
+        "summary": "Get a work location by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "WorkLocation UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work location detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WorkLocationResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Work Locations"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "WorkLocationsController_update",
+        "summary": "Update a work location",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "WorkLocation UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkLocationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Work location updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WorkLocationResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Work Locations"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "WorkLocationsController_remove",
+        "summary": "Soft-delete a work location",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "WorkLocation UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work location deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WorkLocationDeleteResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Work Locations"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/employees/stats": {
       "get": {
         "operationId": "EmployeesController_getStats",
@@ -6195,7 +6968,7 @@
       "post": {
         "operationId": "OnboardingPublicController_submitDocuments",
         "summary": "Upload documents + final submit (Step 2)",
-        "description": "Accepts one or more document files with their types. Upload files in batches. Set finalSubmit=true in the form field to trigger SUBMITTED transition (all docs must already be uploaded). Blocked if Step 1 not completed.",
+        "description": "Accepts one or more document files with their types. Upload files in batches. Set finalSubmit=true in the form field to trigger SUBMITTED transition (all docs must already be uploaded). Blocked if Step 1 not completed. Each file is limited to 5 MB and must be application/pdf, image/jpeg, image/jpg, or image/png.",
         "parameters": [
           {
             "name": "token",
@@ -6244,7 +7017,13 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Documents uploaded (and, if finalSubmit=true, onboarding submitted for review)."
+          },
+          "400": {
+            "description": "Bad request — either a rejected file (disallowed mimetype; only PDF/JPG/PNG accepted) or Step 1 (personal + bank details) has not been completed yet."
+          },
+          "413": {
+            "description": "A file exceeds the 5 MB per-file size limit."
           }
         },
         "tags": [
@@ -8216,6 +8995,506 @@
         ]
       }
     },
+    "/api/v1/attendance/od": {
+      "post": {
+        "operationId": "OdController_create",
+        "summary": "Mark on-duty (create today's OD record + first location entry)",
+        "description": "Creates (or appends to) the caller's OD record for today. GPS coordinates are resolved to a work location name offline; minutes are added to the running total.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOdDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OD record created/updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OdResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "On Duty"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "OdController_findAll",
+        "summary": "List OD records (paginated)",
+        "description": "Requires attendance:read (see all OD records in the organization, optionally filtered by ?employeeId=&date=) or attendance:checkin (self-only).",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by employee ID (attendance:read only)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "ISO date (YYYY-MM-DD) to filter a single day",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of OD records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "properties": {
+                            "data": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/OdResponseDto"
+                              }
+                            },
+                            "meta": {
+                              "properties": {
+                                "total": {
+                                  "type": "number",
+                                  "example": 100
+                                },
+                                "page": {
+                                  "type": "number",
+                                  "example": 1
+                                },
+                                "limit": {
+                                  "type": "number",
+                                  "example": 20
+                                },
+                                "totalPages": {
+                                  "type": "number",
+                                  "example": 5
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "On Duty"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/attendance/od/{id}/locations": {
+      "post": {
+        "operationId": "OdController_addLocation",
+        "summary": "Append another on-duty location entry to an existing OD record",
+        "description": "Appends a location + minutes entry and recomputes the OD record total minutes.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "OdRecord UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddOdLocationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Location entry added, total recomputed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OdResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 400,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "Validation failed: email must be a valid email address"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 401,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Invalid or expired token"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 403,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Missing required permissions: payroll:run"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example/123",
+                    "method": "GET",
+                    "error": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 409,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "POST",
+                    "error": "A payroll run for 7/2026 already exists for this organization"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 500,
+                    "timestamp": "2024-01-15T10:30:00.000Z",
+                    "path": "/api/v1/example",
+                    "method": "GET",
+                    "error": "Internal server error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "On Duty"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/attendance/check-in": {
       "post": {
         "operationId": "AttendanceController_checkIn",
@@ -8531,7 +9810,8 @@
                 "LOSS_OF_PAY",
                 "ON_LEAVE",
                 "HOLIDAY",
-                "WEEK_OFF"
+                "WEEK_OFF",
+                "ON_DUTY"
               ],
               "type": "string"
             }
@@ -8625,7 +9905,8 @@
                 "LOSS_OF_PAY",
                 "ON_LEAVE",
                 "HOLIDAY",
-                "WEEK_OFF"
+                "WEEK_OFF",
+                "ON_DUTY"
               ],
               "type": "string"
             }
@@ -9282,6 +10563,18 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "description": "Filter holidays to this calendar year. Omit to return all years.",
+            "schema": {
+              "minimum": 2000,
+              "maximum": 2100,
+              "example": 2026,
               "type": "number"
             }
           }
@@ -23842,6 +25135,10 @@
       "description": "Organization Management"
     },
     {
+      "name": "Work Locations",
+      "description": "Geo-Fenced Work Locations for Offline GPS Check-In/OD Resolution"
+    },
+    {
       "name": "Roles & Permissions",
       "description": "RBAC — Role & Permission Management"
     },
@@ -23860,6 +25157,10 @@
     {
       "name": "Attendance",
       "description": "Attendance & Tracking"
+    },
+    {
+      "name": "On Duty",
+      "description": "On-Duty (Field) Attendance Records & Location Tracking"
     },
     {
       "name": "Leave",
@@ -24025,12 +25326,30 @@
             "type": "string",
             "example": "org_uuid_456"
           },
+          "mustChangePassword": {
+            "type": "boolean",
+            "example": false,
+            "description": "When true, every non-exempt route 403s with MUST_CHANGE_PASSWORD until the user calls PUT /auth/change-password — the frontend MUST redirect to the forced change-password screen whenever this is true."
+          },
           "permissions": {
             "example": [
               "employee:read",
               "payroll:view",
               "leave:apply"
             ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "roles": {
+            "example": [
+              {
+                "id": "role_uuid_789",
+                "name": "hr_manager"
+              }
+            ],
+            "description": "All roles assigned to this user (used by the frontend Profile page).",
             "type": "array",
             "items": {
               "type": "string"
@@ -24050,7 +25369,9 @@
           "email",
           "phone",
           "organizationId",
+          "mustChangePassword",
           "permissions",
+          "roles",
           "employee"
         ]
       },
@@ -26079,6 +27400,141 @@
           }
         }
       },
+      "SuccessResponseDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "WorkLocationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "radiusMeters": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "lat",
+          "lng",
+          "radiusMeters",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateWorkLocationDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "HQ - Andheri"
+          },
+          "lat": {
+            "type": "number",
+            "example": 19.076
+          },
+          "lng": {
+            "type": "number",
+            "example": 72.8777
+          },
+          "radiusMeters": {
+            "type": "number",
+            "example": 200,
+            "description": "Recognition radius in meters"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "lat",
+          "lng",
+          "radiusMeters"
+        ]
+      },
+      "PaginatedResponseDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateWorkLocationDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "HQ - Andheri"
+          },
+          "lat": {
+            "type": "number",
+            "example": 19.076
+          },
+          "lng": {
+            "type": "number",
+            "example": 72.8777
+          },
+          "radiusMeters": {
+            "type": "number",
+            "example": 200,
+            "description": "Recognition radius in meters"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "WorkLocationDeleteResponseDto": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "message"
+        ]
+      },
       "CreateEmployeeDto": {
         "type": "object",
         "properties": {
@@ -26871,10 +28327,6 @@
           "recordedById"
         ]
       },
-      "SuccessResponseDto": {
-        "type": "object",
-        "properties": {}
-      },
       "PendingApprovalsBreakdownDto": {
         "type": "object",
         "properties": {
@@ -27040,6 +28492,144 @@
           }
         }
       },
+      "OdLocationEntryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "odRecordId": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "locationName": {
+            "type": "string",
+            "nullable": true
+          },
+          "minutes": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "odRecordId",
+          "lat",
+          "lng",
+          "minutes",
+          "recordedAt"
+        ]
+      },
+      "OdResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "number"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OdLocationEntryResponseDto"
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "employeeId",
+          "date",
+          "totalMinutes",
+          "entries",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateOdDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "example": 19.076
+          },
+          "lng": {
+            "type": "number",
+            "example": 72.8777
+          },
+          "minutes": {
+            "type": "number",
+            "minimum": 1,
+            "example": 90,
+            "description": "Minutes spent on-duty at this location"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Client site visit for onboarding demo"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "minutes"
+        ]
+      },
+      "AddOdLocationDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "example": 19.076
+          },
+          "lng": {
+            "type": "number",
+            "example": 72.8777
+          },
+          "minutes": {
+            "type": "number",
+            "minimum": 1,
+            "example": 45,
+            "description": "Minutes spent on-duty at this location"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "minutes"
+        ]
+      },
       "CheckInDto": {
         "type": "object",
         "properties": {
@@ -27142,7 +28732,8 @@
               "LOSS_OF_PAY",
               "ON_LEAVE",
               "HOLIDAY",
-              "WEEK_OFF"
+              "WEEK_OFF",
+              "ON_DUTY"
             ],
             "default": "PRESENT"
           },
@@ -27201,7 +28792,8 @@
               "LOSS_OF_PAY",
               "ON_LEAVE",
               "HOLIDAY",
-              "WEEK_OFF"
+              "WEEK_OFF",
+              "ON_DUTY"
             ]
           },
           "notes": {
@@ -27435,10 +29027,6 @@
           "month",
           "year"
         ]
-      },
-      "PaginatedResponseDto": {
-        "type": "object",
-        "properties": {}
       },
       "PayrollEntryEmployeeSummaryDto": {
         "type": "object",
