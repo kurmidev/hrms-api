@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { BillingCycle } from '@prisma/client';
 import { PrismaService } from '@prisma/prisma.service';
+import { paginate, PaginationDto } from '@common/dto/pagination.dto';
 import {
   RegisterOrganizationDto,
   UpdateOrganizationDto,
@@ -296,7 +297,10 @@ export class PlatformOrganizationsService {
       }),
       this.prisma.organization.count(),
     ]);
-    return { data, total, page, limit };
+    const paginationDto = new PaginationDto();
+    paginationDto.page = page;
+    paginationDto.limit = limit;
+    return paginate(data, total, paginationDto);
   }
 
   async findById(id: string) {
