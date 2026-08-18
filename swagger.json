@@ -8230,17 +8230,27 @@
     "/api/v1/dashboards": {
       "get": {
         "operationId": "DashboardController_findForUser",
+        "summary": "Get the current user's dashboard",
+        "description": "Returns the dashboard configuration (widgets and layout) assigned to the requesting user, falling back to the role-default dashboard for their org if none is personalized.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Dashboard configuration for the current user",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Object"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -8353,6 +8363,8 @@
       },
       "post": {
         "operationId": "DashboardController_create",
+        "summary": "Create a dashboard",
+        "description": "Creates a custom dashboard (with widgets) for the current user or role.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -8366,11 +8378,22 @@
         },
         "responses": {
           "201": {
-            "description": "",
+            "description": "Dashboard created",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Object"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -8485,17 +8508,27 @@
     "/api/v1/dashboards/defaults": {
       "get": {
         "operationId": "DashboardController_findDefaults",
+        "summary": "List default dashboard configurations",
+        "description": "Returns the role-default dashboard configurations for the organization.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Default dashboard configurations",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Object"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -8610,6 +8643,8 @@
     "/api/v1/dashboards/{id}": {
       "put": {
         "operationId": "DashboardController_update",
+        "summary": "Update a dashboard",
+        "description": "Updates an existing dashboard's name, widgets, or default status.",
         "parameters": [
           {
             "name": "id",
@@ -8632,11 +8667,22 @@
         },
         "responses": {
           "200": {
-            "description": "",
+            "description": "Dashboard updated",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Object"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -8749,6 +8795,8 @@
       },
       "delete": {
         "operationId": "DashboardController_remove",
+        "summary": "Delete a dashboard",
+        "description": "Permanently removes a dashboard configuration.",
         "parameters": [
           {
             "name": "id",
@@ -8761,7 +8809,25 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Dashboard deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Object"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request — Validation failed or missing required fields",
@@ -8873,17 +8939,27 @@
     "/api/v1/dashboards/seed-defaults": {
       "post": {
         "operationId": "DashboardController_seedDefaults",
+        "summary": "Seed the organization with default dashboards",
+        "description": "Creates the standard role-default dashboard configurations (super_admin, org_admin, hr_manager, employee, etc.) for the organization if they do not already exist. Requires the org:update permission.",
         "parameters": [],
         "responses": {
           "201": {
-            "description": "",
+            "description": "Default dashboards seeded",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Object"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -8921,16 +8997,16 @@
             }
           },
           "403": {
-            "description": "Forbidden — Insufficient permissions",
+            "description": "Forbidden — missing required permission: org:update",
             "content": {
               "application/json": {
                 "schema": {
                   "example": {
                     "statusCode": 403,
-                    "timestamp": "2024-01-15T10:30:00.000Z",
-                    "path": "/api/v1/example",
-                    "method": "GET",
-                    "error": "Missing required permissions: payroll:run"
+                    "timestamp": "2026-08-18T10:30:00.000Z",
+                    "path": "/api/v1/dashboards/seed-defaults",
+                    "method": "POST",
+                    "message": "Missing required permissions: org:update"
                   }
                 }
               }
@@ -28423,6 +28499,10 @@
           "kpi_my_leave_balance",
           "kpi_my_performance"
         ]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
       },
       "CreateDashboardWidgetDto": {
         "type": "object",
