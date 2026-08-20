@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { AppController } from './app.controller';
 import { ClsModule } from 'nestjs-cls';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -39,6 +40,7 @@ import { InsuranceModule } from './modules/insurance/insurance.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
+  controllers: [AppController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
