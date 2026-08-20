@@ -1,9 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { EmployeeStatus, EmploymentType } from '@prisma/client';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class EmployeeQueryDto extends PaginationDto {
+  @ApiPropertyOptional({ example: 'Sarah' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  search?: string;
+
   @ApiPropertyOptional({ enum: EmployeeStatus })
   @IsEnum(EmployeeStatus)
   @IsOptional()

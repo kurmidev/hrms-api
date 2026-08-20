@@ -33,7 +33,7 @@ export class DashboardController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get the current user\'s dashboard',
+    summary: "Get the current user's dashboard",
     description:
       'Returns the dashboard configuration (widgets and layout) assigned to the requesting ' +
       'user, falling back to the role-default dashboard for their org if none is personalized.',
@@ -68,7 +68,7 @@ export class DashboardController {
   @Put(':id')
   @ApiOperation({
     summary: 'Update a dashboard',
-    description: 'Updates an existing dashboard\'s name, widgets, or default status.',
+    description: "Updates an existing dashboard's name, widgets, or default status.",
   })
   @ApiSuccessResponse(Object, 'Dashboard updated')
   update(@Param('id') id: string, @Body() dto: UpdateDashboardDto, @Request() req) {

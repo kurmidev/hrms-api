@@ -99,7 +99,7 @@ describe('CSV employee/payroll import seeder — DB + login verification (e2e)',
       .send({ email: sampleUser!.email, password: PLACEHOLDER_PASSWORD })
       .expect(200);
 
-    expect(res.body.status).toBe(true);
+    expect(res.body.success).toBe(true);
     expect(res.body.data.accessToken).toBeDefined();
     expect(res.body.data.user.email).toBe(sampleUser!.email);
 

@@ -50,7 +50,7 @@ export class TodosController {
   }
 
   @Get()
-  @RequirePermissions('todo:create')
+  @RequirePermissions('todo:read')
   @ApiOperation({
     summary: 'List todos (paginated)',
     description:
@@ -67,7 +67,7 @@ export class TodosController {
   }
 
   @Get(':id')
-  @RequirePermissions('todo:create')
+  @RequirePermissions('todo:read')
   @ApiOperation({ summary: 'Get a single todo' })
   @ApiParam({ name: 'id', description: 'TodoTask UUID' })
   @ApiSuccessResponse(TodoResponseDto, 'Todo detail')

@@ -22,7 +22,7 @@ export class DisciplinaryController {
   constructor(private readonly disciplinaryService: DisciplinaryService) {}
 
   @Post()
-  @RequirePermissions('exit:manage')
+  @RequirePermissions('disciplinary:manage')
   @ApiOperation({
     summary: 'Issue a disciplinary memo',
     description:
@@ -39,7 +39,7 @@ export class DisciplinaryController {
   }
 
   @Get()
-  @RequirePermissions('exit:manage')
+  @RequirePermissions('disciplinary:read')
   @ApiOperation({ summary: 'List disciplinary memos (paginated, filterable)' })
   @ApiPaginatedResponse(DisciplinaryMemoResponseDto, 'Paginated list of disciplinary memos')
   findAll(@OrganizationId() organizationId: string, @Query() query: QueryDisciplinaryMemoDto) {
@@ -47,7 +47,7 @@ export class DisciplinaryController {
   }
 
   @Get('employee/:employeeId/summary')
-  @RequirePermissions('exit:manage')
+  @RequirePermissions('disciplinary:read')
   @ApiOperation({ summary: "Get an employee's active-memo count and termination-review flag" })
   @ApiParam({ name: 'employeeId', description: 'Employee UUID' })
   @ApiSuccessResponse(DisciplinaryEmployeeSummaryResponseDto, 'Employee disciplinary summary')
@@ -59,7 +59,7 @@ export class DisciplinaryController {
   }
 
   @Get(':id')
-  @RequirePermissions('exit:manage')
+  @RequirePermissions('disciplinary:read')
   @ApiOperation({ summary: 'Get a single disciplinary memo' })
   @ApiParam({ name: 'id', description: 'DisciplinaryMemo UUID' })
   @ApiSuccessResponse(DisciplinaryMemoResponseDto, 'Disciplinary memo detail')

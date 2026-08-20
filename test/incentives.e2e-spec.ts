@@ -95,7 +95,15 @@ describe('Incentives & Todos module (e2e)', () => {
         organizationId: org.id,
         name: `incentives-e2e-approver-${label}`,
         description: 'Test approver role',
-        permissions: ['todo:create', 'todo:approve', 'payroll:read', 'payroll:run'],
+        permissions: [
+          'todo:read',
+          'todo:create',
+          'todo:approve',
+          'payroll:read',
+          'payroll:run',
+          'incentive:read',
+          'incentive:manage',
+        ],
         isSystemRole: false,
       },
     });
@@ -104,8 +112,8 @@ describe('Incentives & Todos module (e2e)', () => {
       data: {
         organizationId: org.id,
         name: `incentives-e2e-employee-${label}`,
-        description: 'Test employee role (todo:create only)',
-        permissions: ['todo:create'],
+        description: 'Test employee role (todo:read/create only, no todo:approve/incentive:manage)',
+        permissions: ['todo:read', 'todo:create'],
         isSystemRole: false,
       },
     });

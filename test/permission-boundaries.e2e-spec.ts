@@ -173,7 +173,7 @@ describe('Permission boundaries + edge cases (e2e)', () => {
         .post('/api/v1/auth/login')
         .send({ email: 'shi1878@igreentec.in', password: 'definitely-wrong-password' })
         .expect(401);
-      expect(res.body.status).toBe(false);
+      expect(res.body.success).toBe(false);
     });
 
     // ── 1. Employee-role permission boundaries (shi1878, 403 not 200/500) ──
@@ -184,32 +184,65 @@ describe('Permission boundaries + edge cases (e2e)', () => {
       path: string;
       body?: Record<string, unknown>;
     }> = [
-      { label: 'GET /notices/manage (onboarding:manage)', method: 'get', path: '/api/v1/notices/manage' },
       {
-        label: 'PUT /green-thanks/config (payroll:run)',
+        label: 'GET /notices/manage (onboarding:manage)',
+        method: 'get',
+        path: '/api/v1/notices/manage',
+      },
+      {
+        label: 'PUT /green-thanks/config (green_thanks:manage)',
         method: 'put',
         path: '/api/v1/green-thanks/config',
         body: { pointsToInrRate: 1 },
       },
-      { label: 'GET /incentive-rules (todo:approve)', method: 'get', path: '/api/v1/incentive-rules' },
-      { label: 'POST /payroll/runs (payroll:run)', method: 'post', path: '/api/v1/payroll/runs', body: { month: 1, year: 2020 } },
+      {
+        label: 'GET /incentive-rules (incentive:read)',
+        method: 'get',
+        path: '/api/v1/incentive-rules',
+      },
+      {
+        label: 'POST /payroll/runs (payroll:run)',
+        method: 'post',
+        path: '/api/v1/payroll/runs',
+        body: { month: 1, year: 2020 },
+      },
       { label: 'GET /payroll/runs (payroll:read)', method: 'get', path: '/api/v1/payroll/runs' },
-      { label: 'PUT /payroll/runs/:id/approve (payroll:approve)', method: 'put', path: '/api/v1/payroll/runs/nonexistent-id/approve' },
+      {
+        label: 'PUT /payroll/runs/:id/approve (payroll:approve)',
+        method: 'put',
+        path: '/api/v1/payroll/runs/nonexistent-id/approve',
+      },
       { label: 'GET /disciplinary (exit:manage)', method: 'get', path: '/api/v1/disciplinary' },
       { label: 'GET /exit (exit:manage)', method: 'get', path: '/api/v1/exit' },
       { label: 'GET /roles (role:read)', method: 'get', path: '/api/v1/roles' },
-      { label: 'GET /organization/payroll-structures (payroll:read)', method: 'get', path: '/api/v1/payroll-structures' },
-      { label: 'GET /reports/headcount (report:read)', method: 'get', path: '/api/v1/reports/headcount' },
-      { label: 'PUT /organization (org:update)', method: 'put', path: '/api/v1/organization', body: { name: 'Hacked' } },
+      {
+        label: 'GET /organization/payroll-structures (payroll:read)',
+        method: 'get',
+        path: '/api/v1/payroll-structures',
+      },
+      {
+        label: 'GET /reports/headcount (report:read)',
+        method: 'get',
+        path: '/api/v1/reports/headcount',
+      },
+      {
+        label: 'PUT /organization (org:update)',
+        method: 'put',
+        path: '/api/v1/organization',
+        body: { name: 'Hacked' },
+      },
       { label: 'GET /employees (employee:read)', method: 'get', path: '/api/v1/employees' },
     ];
 
-    it.each(employeeBoundaryCases)('$label -> 403 for employee-role caller (not 200, not 500)', async ({ method, path, body }) => {
-      const req = request(app.getHttpServer())[method](path).set(authed(shiToken, orgId));
-      const res = body ? await req.send(body) : await req;
-      expect(res.status).toBe(403);
-      expect(res.body.status).toBe(false);
-    });
+    it.each(employeeBoundaryCases)(
+      '$label -> 403 for employee-role caller (not 200, not 500)',
+      async ({ method, path, body }) => {
+        const req = request(app.getHttpServer())[method](path).set(authed(shiToken, orgId));
+        const res = body ? await req.send(body) : await req;
+        expect(res.status).toBe(403);
+        expect(res.body.success).toBe(false);
+      },
+    );
 
     // ── 2. Employee CAN see OWN data, scoped to self only ───────────────────
 
@@ -218,7 +251,7 @@ describe('Permission boundaries + edge cases (e2e)', () => {
         .get('/api/v1/attendance/my')
         .set(authed(shiToken, orgId))
         .expect(200);
-      expect(res.body.status).toBe(true);
+      expect(res.body.success).toBe(true);
       // every row (if any) must belong to shi1878's own employee record
       const shi = await prisma.employee.findFirst({ where: { empCode: 'Shi1878' } });
       const rows = res.body.data.data ?? res.body.data;
@@ -227,20 +260,20 @@ describe('Permission boundaries + edge cases (e2e)', () => {
       }
     });
 
-    it('GET /leave/my-balance succeeds (200) for the caller\'s own balance', async () => {
+    it("GET /leave/my-balance succeeds (200) for the caller's own balance", async () => {
       const res = await request(app.getHttpServer())
         .get('/api/v1/leave/my-balance')
         .set(authed(shiToken, orgId))
         .expect(200);
-      expect(res.body.status).toBe(true);
+      expect(res.body.success).toBe(true);
     });
 
-    it('GET /leave/my succeeds (200), scoped to the caller\'s own applications only', async () => {
+    it("GET /leave/my succeeds (200), scoped to the caller's own applications only", async () => {
       const res = await request(app.getHttpServer())
         .get('/api/v1/leave/my')
         .set(authed(shiToken, orgId))
         .expect(200);
-      expect(res.body.status).toBe(true);
+      expect(res.body.success).toBe(true);
       const shi = await prisma.employee.findFirst({ where: { empCode: 'Shi1878' } });
       const rows = res.body.data.data ?? res.body.data;
       for (const row of rows) {
@@ -294,7 +327,9 @@ describe('Permission boundaries + edge cases (e2e)', () => {
         },
       });
 
-      const department = await prisma.department.create({ data: { organizationId: org.id, name: 'Dept' } });
+      const department = await prisma.department.create({
+        data: { organizationId: org.id, name: 'Dept' },
+      });
       const designation = await prisma.designation.create({
         data: { organizationId: org.id, departmentId: department.id, name: 'Designation' },
       });
@@ -412,7 +447,9 @@ describe('Permission boundaries + edge cases (e2e)', () => {
     });
 
     afterAll(async () => {
-      await prisma.leaveApplication.deleteMany({ where: { employeeId: shiEmployeeId, leavePolicyId: casualPolicyId } });
+      await prisma.leaveApplication.deleteMany({
+        where: { employeeId: shiEmployeeId, leavePolicyId: casualPolicyId },
+      });
       await prisma.leaveBalance.delete({ where: { id: createdBalanceId } }).catch(() => {});
       await shiRestore();
     });

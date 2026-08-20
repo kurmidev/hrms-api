@@ -18,7 +18,7 @@ export class GreenThanksConfigController {
   constructor(private readonly greenThanksConfigService: GreenThanksConfigService) {}
 
   @Get()
-  @RequirePermissions('payroll:run')
+  @RequirePermissions('green_thanks:manage')
   @ApiOperation({ summary: 'Get the organization Green Thanks config (upsert-on-read singleton)' })
   @ApiSuccessResponse(GreenThanksConfigResponseDto, 'Green Thanks config')
   get(@OrganizationId() organizationId: string) {
@@ -26,7 +26,7 @@ export class GreenThanksConfigController {
   }
 
   @Put()
-  @RequirePermissions('payroll:run')
+  @RequirePermissions('green_thanks:manage')
   @ApiOperation({ summary: 'Update the organization Green Thanks config' })
   @ApiSuccessResponse(GreenThanksConfigResponseDto, 'Green Thanks config updated')
   update(@OrganizationId() organizationId: string, @Body() dto: UpdateGreenThanksConfigDto) {

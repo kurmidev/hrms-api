@@ -103,7 +103,14 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
         organizationId: org.id,
         name: `wl-od-e2e-admin-${label}`,
         description: 'Test admin role',
-        permissions: ['org:read', 'org:update', 'attendance:read', 'attendance:checkin', 'leave:apply', 'leave:read'],
+        permissions: [
+          'org:read',
+          'org:update',
+          'attendance:read',
+          'attendance:checkin',
+          'leave:apply',
+          'leave:read',
+        ],
         isSystemRole: false,
       },
     });
@@ -263,7 +270,13 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/work-locations')
         .set(authed(orgA.adminToken, orgA.organizationId))
-        .send({ name: 'HQ - Andheri', lat: 19.076, lng: 72.8777, radiusMeters: 200, isActive: true })
+        .send({
+          name: 'HQ - Andheri',
+          lat: 19.076,
+          lng: 72.8777,
+          radiusMeters: 200,
+          isActive: true,
+        })
         .expect(201);
 
       expect(res.body.data.name).toBe('HQ - Andheri');
@@ -352,7 +365,13 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
       await request(app.getHttpServer())
         .post('/api/v1/work-locations')
         .set(authed(org.adminToken, org.organizationId))
-        .send({ name: 'HQ - Andheri', lat: 19.076, lng: 72.8777, radiusMeters: 200, isActive: true })
+        .send({
+          name: 'HQ - Andheri',
+          lat: 19.076,
+          lng: 72.8777,
+          radiusMeters: 200,
+          isActive: true,
+        })
         .expect(201);
     });
 
@@ -408,7 +427,7 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
       org = await createOrgFixture('od-accum');
     });
 
-    it('POST /attendance/od creates today\'s record with the first location entry + totalMinutes', async () => {
+    it("POST /attendance/od creates today's record with the first location entry + totalMinutes", async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/attendance/od')
         .set(authed(org.employeeToken, org.organizationId))
@@ -443,7 +462,7 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
       expect(res.body.data.entries).toHaveLength(3);
     });
 
-    it('another attendance:checkin-only employee cannot append to someone else\'s OD record (403)', async () => {
+    it("another attendance:checkin-only employee cannot append to someone else's OD record (403)", async () => {
       await request(app.getHttpServer())
         .post(`/api/v1/attendance/od/${odRecordId}/locations`)
         .set(authed(org.employee2Token, org.organizationId))

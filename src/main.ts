@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -9,9 +10,10 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug'],
   });
 
@@ -19,6 +21,11 @@ async function bootstrap() {
   const port = configService.get<number>('port');
   const apiPrefix = configService.get<string>('apiPrefix');
   const nodeEnv = configService.get<string>('nodeEnv');
+
+  // Serve locally-stored uploads (used when STORAGE_DRIVER=local instead of S3/MinIO)
+  app.useStaticAssets(path.join(process.cwd(), configService.get<string>('storage.localDir')), {
+    prefix: '/uploads',
+  });
 
   // Security
   app.use(helmet());

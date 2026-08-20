@@ -48,7 +48,7 @@ export class NoticesController {
   constructor(private readonly noticesService: NoticesService) {}
 
   @Post()
-  @RequirePermissions('onboarding:manage')
+  @RequirePermissions('notice:manage')
   @ApiOperation({ summary: 'Create a notice (draft, scheduled, or published immediately)' })
   @ApiSuccessResponse(NoticeResponseDto, 'Notice created', 201)
   create(@OrganizationId() organizationId: string, @Body() dto: CreateNoticeDto) {
@@ -56,7 +56,7 @@ export class NoticesController {
   }
 
   @Get()
-  @RequirePermissions('employee:read')
+  @RequirePermissions('notice:read')
   @ApiOperation({
     summary: 'List notices (paginated)',
     description:
@@ -74,7 +74,7 @@ export class NoticesController {
   }
 
   @Get(':id')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('notice:read')
   @ApiOperation({ summary: 'Get a single notice (honors visibility/targeting for non-managers)' })
   @ApiParam({ name: 'id', description: 'Notice UUID' })
   @ApiSuccessResponse(NoticeResponseDto, 'Notice detail')
@@ -88,7 +88,7 @@ export class NoticesController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('onboarding:manage')
+  @RequirePermissions('notice:manage')
   @ApiOperation({
     summary: 'Update a notice (draft/scheduled only — published notices are locked)',
   })
@@ -104,7 +104,7 @@ export class NoticesController {
 
   @Put(':id/publish')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('onboarding:manage')
+  @RequirePermissions('notice:manage')
   @ApiOperation({ summary: 'Publish a draft or scheduled notice immediately' })
   @ApiParam({ name: 'id', description: 'Notice UUID' })
   @ApiSuccessResponse(NoticeResponseDto, 'Notice published')
@@ -114,7 +114,7 @@ export class NoticesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('onboarding:manage')
+  @RequirePermissions('notice:manage')
   @ApiOperation({ summary: 'Delete a notice (and its attachment, if any)' })
   @ApiParam({ name: 'id', description: 'Notice UUID' })
   @ApiSuccessResponse(NoticeDeleteResponseDto, 'Notice deleted')
@@ -124,7 +124,7 @@ export class NoticesController {
 
   @Post(':id/attachment')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('onboarding:manage')
+  @RequirePermissions('notice:manage')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Attach a file to a notice (uploaded to MinIO/S3)' })
@@ -147,7 +147,7 @@ export class NoticesController {
 
   @Put(':id/read')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:read')
+  @RequirePermissions('notice:read')
   @ApiOperation({ summary: 'Mark a notice as read by the current employee (idempotent)' })
   @ApiParam({ name: 'id', description: 'Notice UUID' })
   @ApiSuccessResponse(NoticeMarkReadResponseDto, 'Notice marked as read')
@@ -160,7 +160,7 @@ export class NoticesController {
   }
 
   @Get(':id/read-receipts')
-  @RequirePermissions('onboarding:manage')
+  @RequirePermissions('notice:manage')
   @ApiOperation({ summary: 'List employees who have read a notice (paginated)' })
   @ApiParam({ name: 'id', description: 'Notice UUID' })
   @ApiPaginatedResponse(NoticeReadReceiptResponseDto, 'Paginated list of read receipts')

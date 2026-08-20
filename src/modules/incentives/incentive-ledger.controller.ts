@@ -22,7 +22,7 @@ export class IncentiveLedgerController {
   constructor(private readonly incentiveLedgerService: IncentiveLedgerService) {}
 
   @Get()
-  @RequirePermissions('payroll:read')
+  @RequirePermissions('incentive:read')
   @ApiOperation({
     summary: 'List incentive ledger entries (paginated)',
     description:
@@ -40,7 +40,7 @@ export class IncentiveLedgerController {
 
   @Put(':id/release')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('todo:approve')
+  @RequirePermissions('incentive:manage')
   @ApiOperation({ summary: 'Release a held incentive for payroll inclusion' })
   @ApiParam({ name: 'id', description: 'IncentiveLedger UUID' })
   @ApiSuccessResponse(IncentiveLedgerResponseDto, 'Incentive ledger entry released')

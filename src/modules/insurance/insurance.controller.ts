@@ -37,7 +37,7 @@ export class InsuranceController {
   constructor(private readonly insuranceService: InsuranceService) {}
 
   @Get('policies')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('insurance:read')
   @ApiOperation({ summary: 'List insurance policies (paginated, filterable)' })
   @ApiPaginatedResponse(InsurancePolicyResponseDto, 'Paginated list of insurance policies')
   listPolicies(@OrganizationId() organizationId: string, @Query() query: QueryInsurancePolicyDto) {
@@ -45,7 +45,7 @@ export class InsuranceController {
   }
 
   @Post('policies')
-  @RequirePermissions('employee:update')
+  @RequirePermissions('insurance:manage')
   @ApiOperation({ summary: 'Create an insurance policy' })
   @ApiSuccessResponse(InsurancePolicyResponseDto, 'Insurance policy created', 201)
   createPolicy(@OrganizationId() organizationId: string, @Body() dto: CreateInsurancePolicyDto) {
@@ -53,7 +53,7 @@ export class InsuranceController {
   }
 
   @Get('policies/:id')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('insurance:read')
   @ApiOperation({ summary: 'Get a single insurance policy' })
   @ApiParam({ name: 'id', description: 'InsurancePolicy UUID' })
   @ApiSuccessResponse(InsurancePolicyResponseDto, 'Insurance policy detail')
@@ -63,7 +63,7 @@ export class InsuranceController {
 
   @Put('policies/:id')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:update')
+  @RequirePermissions('insurance:manage')
   @ApiOperation({ summary: 'Update an insurance policy' })
   @ApiParam({ name: 'id', description: 'InsurancePolicy UUID' })
   @ApiSuccessResponse(InsurancePolicyResponseDto, 'Insurance policy updated')
@@ -76,7 +76,7 @@ export class InsuranceController {
   }
 
   @Post('enroll')
-  @RequirePermissions('employee:update')
+  @RequirePermissions('insurance:manage')
   @ApiOperation({
     summary: 'Enroll an employee in a policy',
     description:
@@ -88,7 +88,7 @@ export class InsuranceController {
   }
 
   @Get('enrollments')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('insurance:read')
   @ApiOperation({ summary: 'List insurance enrollments (paginated, filterable)' })
   @ApiPaginatedResponse(EmployeeInsuranceResponseDto, 'Paginated list of insurance enrollments')
   listEnrollments(@OrganizationId() organizationId: string, @Query() query: QueryEnrollmentDto) {
@@ -96,7 +96,7 @@ export class InsuranceController {
   }
 
   @Get('enrollments/:id')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('insurance:read')
   @ApiOperation({ summary: 'Get a single insurance enrollment' })
   @ApiParam({ name: 'id', description: 'EmployeeInsurance UUID' })
   @ApiSuccessResponse(EmployeeInsuranceResponseDto, 'Insurance enrollment detail')
@@ -106,7 +106,7 @@ export class InsuranceController {
 
   @Put('enrollments/:id')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:update')
+  @RequirePermissions('insurance:manage')
   @ApiOperation({ summary: "Update an enrollment's family members" })
   @ApiParam({ name: 'id', description: 'EmployeeInsurance UUID' })
   @ApiSuccessResponse(EmployeeInsuranceResponseDto, 'Insurance enrollment updated')
@@ -120,7 +120,7 @@ export class InsuranceController {
 
   @Put('enrollments/:id/approve')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:update')
+  @RequirePermissions('insurance:manage')
   @ApiOperation({ summary: 'Approve or reject an insurance enrollment' })
   @ApiParam({ name: 'id', description: 'EmployeeInsurance UUID' })
   @ApiSuccessResponse(EmployeeInsuranceResponseDto, 'Insurance enrollment approval status updated')

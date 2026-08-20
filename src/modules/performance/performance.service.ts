@@ -11,6 +11,7 @@ import { CreatePerformanceCycleDto } from './dto/create-performance-cycle.dto';
 import { QueryPerformanceCycleDto } from './dto/query-performance-cycle.dto';
 import { SubmitRatingDto } from './dto/submit-rating.dto';
 import { QueryRatingDto } from './dto/query-rating.dto';
+import { QueryKpiDto } from './dto/query-kpi.dto';
 
 export interface RequestingUser {
   employeeId: string | null;
@@ -230,6 +231,53 @@ export class PerformanceService {
 
     return paginate(
       data.map((rating) => this.toRatingResponse(rating, raterMap)),
+      total,
+      query,
+    );
+  }
+
+  // ─── KPIs ───────────────────────────────────────────────────────────────────
+
+  async listKpis(organizationId: string, query: QueryKpiDto) {
+    const where: Prisma.EmployeeKpiWhereInput = {
+      kpi: {
+        organizationId,
+        ...(query.designationId && { designationId: query.designationId }),
+      },
+      ...(query.status && { status: query.status }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.employeeKpi.findMany({
+        where,
+        include: {
+          kpi: {
+            include: { designation: { select: { id: true, name: true } } },
+          },
+          employee: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: { assignedAt: 'desc' },
+        skip: query.skip,
+        take: query.limit,
+      }),
+      this.prisma.employeeKpi.count({ where }),
+    ]);
+
+    return paginate(
+      data.map((row) => ({
+        id: row.id,
+        employeeId: row.employeeId,
+        employeeName: `${row.employee.firstName} ${row.employee.lastName}`,
+        designationId: row.kpi.designationId,
+        designationName: row.kpi.designation.name,
+        kpiTitle: row.kpi.title,
+        targetValue: row.kpi.targetValue,
+        unit: row.kpi.unit,
+        achievedValue: row.achievedValue,
+        status: row.status,
+      })),
       total,
       query,
     );

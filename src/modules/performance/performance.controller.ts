@@ -25,6 +25,8 @@ import { SubmitRatingDto } from './dto/submit-rating.dto';
 import { QueryRatingDto } from './dto/query-rating.dto';
 import { PerformanceCycleResponseDto } from './dto/performance-cycle-response.dto';
 import { PerformanceRatingResponseDto } from './dto/performance-rating-response.dto';
+import { QueryKpiDto } from './dto/query-kpi.dto';
+import { KpiResponseDto } from './dto/kpi-response.dto';
 
 @ApiTags('Performance')
 @ApiBearerAuth()
@@ -34,7 +36,7 @@ export class PerformanceController {
   constructor(private readonly performanceService: PerformanceService) {}
 
   @Post('cycles')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('performance:manage')
   @ApiOperation({ summary: 'Create a performance cycle (DRAFT or ACTIVE, never CLOSED)' })
   @ApiSuccessResponse(PerformanceCycleResponseDto, 'Performance cycle created', 201)
   createCycle(@OrganizationId() organizationId: string, @Body() dto: CreatePerformanceCycleDto) {
@@ -42,7 +44,7 @@ export class PerformanceController {
   }
 
   @Get('cycles')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('performance:read')
   @ApiOperation({ summary: 'List performance cycles (paginated, org-scoped)' })
   @ApiPaginatedResponse(PerformanceCycleResponseDto, 'Paginated list of performance cycles')
   findAllCycles(
@@ -53,7 +55,7 @@ export class PerformanceController {
   }
 
   @Get('my-ratings')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('performance:read')
   @ApiOperation({ summary: "List the current user's own ratings across all cycles" })
   @ApiPaginatedResponse(PerformanceRatingResponseDto, "Paginated list of the caller's own ratings")
   findMyRatings(
@@ -65,7 +67,7 @@ export class PerformanceController {
   }
 
   @Get('cycles/:id')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('performance:read')
   @ApiOperation({ summary: 'Get a single performance cycle' })
   @ApiParam({ name: 'id', description: 'Performance cycle UUID' })
   @ApiSuccessResponse(PerformanceCycleResponseDto, 'Performance cycle detail')
@@ -75,7 +77,7 @@ export class PerformanceController {
 
   @Put('cycles/:id/activate')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('payroll:approve')
+  @RequirePermissions('performance:manage')
   @ApiOperation({ summary: 'Activate a DRAFT cycle so ratings can be submitted' })
   @ApiParam({ name: 'id', description: 'Performance cycle UUID' })
   @ApiSuccessResponse(PerformanceCycleResponseDto, 'Performance cycle activated (DRAFT → ACTIVE)')
@@ -85,7 +87,7 @@ export class PerformanceController {
 
   @Put('cycles/:id/close')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('payroll:approve')
+  @RequirePermissions('performance:manage')
   @ApiOperation({ summary: 'Close an ACTIVE cycle, locking all ratings' })
   @ApiParam({ name: 'id', description: 'Performance cycle UUID' })
   @ApiSuccessResponse(PerformanceCycleResponseDto, 'Performance cycle closed (ACTIVE → CLOSED)')
@@ -94,7 +96,7 @@ export class PerformanceController {
   }
 
   @Post('cycles/:id/ratings')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('performance:manage')
   @ApiOperation({
     summary:
       'Submit or edit a rating for a subordinate (cycle must be ACTIVE; rater must be in the ' +
@@ -112,7 +114,7 @@ export class PerformanceController {
   }
 
   @Get('cycles/:id/ratings')
-  @RequirePermissions('employee:read')
+  @RequirePermissions('performance:read')
   @ApiOperation({ summary: 'List ratings submitted for a cycle (paginated)' })
   @ApiParam({ name: 'id', description: 'Performance cycle UUID' })
   @ApiPaginatedResponse(PerformanceRatingResponseDto, 'Paginated list of ratings for the cycle')
@@ -122,5 +124,13 @@ export class PerformanceController {
     @Query() query: QueryRatingDto,
   ) {
     return this.performanceService.findRatings(organizationId, id, query);
+  }
+
+  @Get('kpis')
+  @RequirePermissions('performance:read')
+  @ApiOperation({ summary: 'List employee KPI assignments (paginated, org-scoped)' })
+  @ApiPaginatedResponse(KpiResponseDto, 'Paginated list of employee KPI assignments')
+  listKpis(@OrganizationId() organizationId: string, @Query() query: QueryKpiDto) {
+    return this.performanceService.listKpis(organizationId, query);
   }
 }

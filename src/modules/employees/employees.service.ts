@@ -218,6 +218,15 @@ export class EmployeesService {
       ...(query.employmentType && { employmentType: query.employmentType }),
       ...(query.departmentId && { departmentId: query.departmentId }),
       ...(query.designationId && { designationId: query.designationId }),
+      ...(query.search && {
+        OR: [
+          { firstName: { contains: query.search } },
+          { lastName: { contains: query.search } },
+          { email: { contains: query.search } },
+          { empCode: { contains: query.search } },
+          { phone: { contains: query.search } },
+        ],
+      }),
     };
 
     const [data, total] = await Promise.all([

@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
 import { OnboardingService } from './onboarding.service';
@@ -126,6 +126,32 @@ export class OnboardingController {
     @Body() dto: ApproveOnboardingDto,
   ) {
     return this.onboardingService.approve(organizationId, id, hrUserId, dto);
+  }
+
+  @Post(':id/resend')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('employee:create')
+  @ApiOperation({
+    summary: 'Resend onboarding invite',
+    description:
+      'Re-sends the invite email/SMS for a PENDING, IN_PROGRESS, or CHANGES_REQUESTED link, using the same token. Extends expiry by 7 days if the link has already expired.',
+  })
+  @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
+  @ApiResponse({ status: 200, description: 'Invite resent; updated onboarding link returned' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Link status does not allow resend (SUBMITTED, UNDER_REVIEW, ACTIVATED, REJECTED, or EXPIRED)',
+  })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:create' })
+  @ApiResponse({ status: 404, description: 'Onboarding link not found in this organization' })
+  resendInvite(
+    @CurrentUser('organizationId') organizationId: string,
+    @CurrentUser('id') hrUserId: string,
+    @Param('id') id: string,
+  ) {
+    return this.onboardingService.resendInvite(organizationId, id, hrUserId);
   }
 
   @Delete(':id')

@@ -78,6 +78,31 @@ export const PERMISSIONS = {
   // Profile
   PROFILE_READ: 'profile:read',
   PROFILE_UPDATE: 'profile:update',
+
+  // Performance
+  PERFORMANCE_READ: 'performance:read',
+  PERFORMANCE_MANAGE: 'performance:manage',
+
+  // Incentives
+  INCENTIVE_READ: 'incentive:read',
+  INCENTIVE_MANAGE: 'incentive:manage',
+
+  // Insurance
+  INSURANCE_READ: 'insurance:read',
+  INSURANCE_MANAGE: 'insurance:manage',
+
+  // Disciplinary
+  DISCIPLINARY_READ: 'disciplinary:read',
+  DISCIPLINARY_MANAGE: 'disciplinary:manage',
+
+  // Notices
+  NOTICE_READ: 'notice:read',
+  NOTICE_MANAGE: 'notice:manage',
+
+  // Green Thanks
+  GREEN_THANKS_READ: 'green_thanks:read',
+  GREEN_THANKS_CREATE: 'green_thanks:create',
+  GREEN_THANKS_MANAGE: 'green_thanks:manage',
 } as const;
 
 const SYSTEM_ROLES = [
@@ -134,6 +159,19 @@ const SYSTEM_ROLES = [
       PERMISSIONS.USER_MANAGE,
       PERMISSIONS.PROFILE_READ,
       PERMISSIONS.PROFILE_UPDATE,
+      PERMISSIONS.PERFORMANCE_READ,
+      PERMISSIONS.PERFORMANCE_MANAGE,
+      PERMISSIONS.INCENTIVE_READ,
+      PERMISSIONS.INCENTIVE_MANAGE,
+      PERMISSIONS.INSURANCE_READ,
+      PERMISSIONS.INSURANCE_MANAGE,
+      PERMISSIONS.DISCIPLINARY_READ,
+      PERMISSIONS.DISCIPLINARY_MANAGE,
+      PERMISSIONS.NOTICE_READ,
+      PERMISSIONS.NOTICE_MANAGE,
+      PERMISSIONS.GREEN_THANKS_READ,
+      PERMISSIONS.GREEN_THANKS_CREATE,
+      PERMISSIONS.GREEN_THANKS_MANAGE,
     ],
   },
   {
@@ -154,6 +192,17 @@ const SYSTEM_ROLES = [
       PERMISSIONS.PROFILE_READ,
       PERMISSIONS.PROFILE_UPDATE,
       PERMISSIONS.USER_READ,
+      PERMISSIONS.PERFORMANCE_READ,
+      PERMISSIONS.PERFORMANCE_MANAGE,
+      PERMISSIONS.DISCIPLINARY_READ,
+      PERMISSIONS.DISCIPLINARY_MANAGE,
+      PERMISSIONS.NOTICE_READ,
+      PERMISSIONS.NOTICE_MANAGE,
+      PERMISSIONS.GREEN_THANKS_READ,
+      PERMISSIONS.GREEN_THANKS_CREATE,
+      PERMISSIONS.GREEN_THANKS_MANAGE,
+      PERMISSIONS.INSURANCE_READ,
+      PERMISSIONS.INSURANCE_MANAGE,
     ],
   },
   {
@@ -172,6 +221,8 @@ const SYSTEM_ROLES = [
       PERMISSIONS.REPORT_READ,
       PERMISSIONS.REPORT_EXPORT,
       PERMISSIONS.PROFILE_READ,
+      PERMISSIONS.INCENTIVE_READ,
+      PERMISSIONS.INCENTIVE_MANAGE,
     ],
   },
   {
@@ -185,6 +236,10 @@ const SYSTEM_ROLES = [
       PERMISSIONS.TODO_APPROVE,
       PERMISSIONS.ATTENDANCE_READ,
       PERMISSIONS.PROFILE_READ,
+      PERMISSIONS.PERFORMANCE_READ,
+      PERMISSIONS.NOTICE_READ,
+      PERMISSIONS.GREEN_THANKS_READ,
+      PERMISSIONS.GREEN_THANKS_CREATE,
     ],
   },
   {
@@ -196,6 +251,9 @@ const SYSTEM_ROLES = [
       PERMISSIONS.TODO_READ,
       PERMISSIONS.TODO_APPROVE,
       PERMISSIONS.PROFILE_READ,
+      PERMISSIONS.NOTICE_READ,
+      PERMISSIONS.GREEN_THANKS_READ,
+      PERMISSIONS.GREEN_THANKS_CREATE,
     ],
   },
   {
@@ -211,6 +269,9 @@ const SYSTEM_ROLES = [
       PERMISSIONS.LOAN_APPLY,
       PERMISSIONS.PROFILE_READ,
       PERMISSIONS.PROFILE_UPDATE,
+      PERMISSIONS.NOTICE_READ,
+      PERMISSIONS.GREEN_THANKS_READ,
+      PERMISSIONS.GREEN_THANKS_CREATE,
     ],
   },
   {
@@ -321,6 +382,88 @@ async function seedDefaultLeavePolicies(prisma: PrismaClient, organizationId: st
   console.log('  Casual leave policy created (maxConsecutiveDays=1)');
 }
 
+const KPI_TEMPLATES = [
+  {
+    title: 'Task Completion Rate',
+    description: 'Percentage of assigned tasks completed on time',
+    targetValue: 90,
+    unit: '%',
+  },
+  {
+    title: 'Attendance Punctuality',
+    description: 'On-time check-in rate across the review period',
+    targetValue: 95,
+    unit: '%',
+  },
+  {
+    title: 'Quality Score',
+    description: 'Average quality rating from manager/peer review',
+    targetValue: 4,
+    unit: 'rating',
+  },
+];
+
+async function seedDesignationKpis(prisma: PrismaClient, organizationId: string) {
+  const designations = await prisma.designation.findMany({
+    where: { organizationId, deletedAt: null },
+    select: { id: true },
+  });
+
+  for (const designation of designations) {
+    for (const template of KPI_TEMPLATES) {
+      await prisma.kpi.upsert({
+        where: {
+          organizationId_designationId_title: {
+            organizationId,
+            designationId: designation.id,
+            title: template.title,
+          },
+        },
+        update: {},
+        create: {
+          organizationId,
+          designationId: designation.id,
+          title: template.title,
+          description: template.description,
+          targetValue: template.targetValue,
+          unit: template.unit,
+        },
+      });
+    }
+  }
+  console.log(`  Designation KPI templates seeded for ${designations.length} designation(s)`);
+}
+
+async function seedEmployeeKpis(prisma: PrismaClient, organizationId: string) {
+  const employees = await prisma.employee.findMany({
+    where: { organizationId, deletedAt: null },
+    select: { id: true, designationId: true },
+  });
+
+  let assignedCount = 0;
+  for (const employee of employees) {
+    const kpis = await prisma.kpi.findMany({
+      where: { organizationId, designationId: employee.designationId },
+      select: { id: true },
+    });
+
+    for (const kpi of kpis) {
+      await prisma.employeeKpi.upsert({
+        where: { employeeId_kpiId: { employeeId: employee.id, kpiId: kpi.id } },
+        update: {},
+        create: {
+          employeeId: employee.id,
+          kpiId: kpi.id,
+        },
+      });
+      assignedCount += 1;
+    }
+  }
+  console.log(
+    `  Employee KPI assignments backfilled: ${assignedCount} row(s) across ${employees.length} employee(s)`,
+  );
+}
+
 async function seedPlatformAdmin(prisma: PrismaClient) {
   const hash = await bcrypt.hash('', 10);
   await prisma.platformAdmin.upsert({
@@ -413,6 +556,11 @@ async function main() {
   await seedDefaultLeavePolicies(prisma, org.id);
   await seedSubscriptionPlans(prisma);
   await seedPlatformAdmin(prisma);
+
+  // KPI seeding must run after employees/designations exist (populated by
+  // prisma/seed-employees-payroll.ts); both helpers are backfill-only/idempotent.
+  await seedDesignationKpis(prisma, org.id);
+  await seedEmployeeKpis(prisma, org.id);
 
   console.log('\nSeed complete.');
   console.log('Default login: admin@igreentec.in / Admin@1234');

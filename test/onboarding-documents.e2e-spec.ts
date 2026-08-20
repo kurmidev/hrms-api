@@ -129,7 +129,7 @@ describe('Onboarding pre-boarding document upload (e2e)', () => {
         .field('finalSubmit', 'false');
 
       expect(res.status).toBe(400);
-      expect(res.body.status).toBe(false);
+      expect(res.body.success).toBe(false);
     });
 
     it('rejects a disallowed image mimetype (gif) with 400', async () => {
@@ -183,9 +183,7 @@ describe('Onboarding pre-boarding document upload (e2e)', () => {
         .field('finalSubmit', 'false');
 
       expect(res.status).toBe(400);
-      expect(res.body.data?.message ?? res.body.message).toContain(
-        'complete personal details',
-      );
+      expect(res.body.data?.message ?? res.body.message).toContain('complete personal details');
     });
   });
 

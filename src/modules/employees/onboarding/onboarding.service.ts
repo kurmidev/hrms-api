@@ -347,6 +347,57 @@ export class OnboardingService {
     );
   }
 
+  async resendInvite(organizationId: string, id: string, hrUserId: string) {
+    const link = await this.getLink(organizationId, id);
+
+    const allowedStatuses: OnboardingStatus[] = [
+      OnboardingStatus.PENDING,
+      OnboardingStatus.IN_PROGRESS,
+      OnboardingStatus.CHANGES_REQUESTED,
+    ];
+    if (!allowedStatuses.includes(link.status)) {
+      throw new BadRequestException(
+        'Only pending, in-progress, or changes-requested invites can be resent',
+      );
+    }
+
+    const isExpired = link.expiresAt < new Date();
+    let expiresAt = link.expiresAt;
+
+    if (isExpired) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      await this.transition(
+        link.id,
+        link.status,
+        link.status,
+        hrUserId,
+        'HR',
+        'Invite resent by HR (expiry extended)',
+        { expiresAt },
+      );
+    } else {
+      await this.transition(
+        link.id,
+        link.status,
+        link.status,
+        hrUserId,
+        'HR',
+        'Invite resent by HR',
+      );
+    }
+
+    await this.onboardingQueue.add('onboarding.invite', {
+      token: link.token,
+      email: link.email,
+      phone: link.phone,
+      candidateName: link.candidateName,
+      expiresAt: expiresAt.toISOString(),
+    });
+
+    return this.getLink(organizationId, id);
+  }
+
   // ── Candidate public: repopulate form ────────────────────────────────────
 
   async getPublicLink(token: string) {

@@ -97,6 +97,10 @@ export class OnboardingPublicController {
     status: 413,
     description: 'A file exceeds the 5 MB per-file size limit.',
   })
+  @ApiResponse({
+    status: 503,
+    description: 'File storage (MinIO/S3) is currently unavailable. Retry later.',
+  })
   @ApiBody({
     schema: {
       type: 'object',

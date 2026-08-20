@@ -21,7 +21,7 @@ export class IncentiveRulesController {
   constructor(private readonly incentiveRulesService: IncentiveRulesService) {}
 
   @Post()
-  @RequirePermissions('todo:approve')
+  @RequirePermissions('incentive:manage')
   @ApiOperation({ summary: 'Create an incentive rule' })
   @ApiSuccessResponse(IncentiveRuleResponseDto, 'Incentive rule created', 201)
   create(@OrganizationId() organizationId: string, @Body() dto: CreateIncentiveRuleDto) {
@@ -29,7 +29,7 @@ export class IncentiveRulesController {
   }
 
   @Get()
-  @RequirePermissions('todo:approve')
+  @RequirePermissions('incentive:read')
   @ApiOperation({ summary: 'List incentive rules (paginated)' })
   @ApiPaginatedResponse(IncentiveRuleResponseDto, 'Paginated list of incentive rules')
   findAll(@OrganizationId() organizationId: string, @Query() query: QueryIncentiveRuleDto) {
@@ -37,7 +37,7 @@ export class IncentiveRulesController {
   }
 
   @Get(':id')
-  @RequirePermissions('todo:approve')
+  @RequirePermissions('incentive:read')
   @ApiOperation({ summary: 'Get a single incentive rule' })
   @ApiParam({ name: 'id', description: 'IncentiveRule UUID' })
   @ApiSuccessResponse(IncentiveRuleResponseDto, 'Incentive rule detail')
@@ -46,7 +46,7 @@ export class IncentiveRulesController {
   }
 
   @Put(':id')
-  @RequirePermissions('todo:approve')
+  @RequirePermissions('incentive:manage')
   @ApiOperation({ summary: 'Update an incentive rule' })
   @ApiParam({ name: 'id', description: 'IncentiveRule UUID' })
   @ApiSuccessResponse(IncentiveRuleResponseDto, 'Incentive rule updated')

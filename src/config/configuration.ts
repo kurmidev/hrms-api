@@ -29,6 +29,12 @@ export default () => ({
     bucketName: process.env.MINIO_BUCKET_NAME || 'hrms-files',
   },
 
+  storage: {
+    // 's3' (MinIO/S3-compatible, default) or 'local' (disk under STORAGE_LOCAL_DIR, dev/no-MinIO fallback)
+    driver: process.env.STORAGE_DRIVER || 's3',
+    localDir: process.env.STORAGE_LOCAL_DIR || 'uploads',
+  },
+
   sms: {
     fast2smsApiKey: process.env.FAST2SMS_API_KEY,
   },

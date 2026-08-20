@@ -8,28 +8,35 @@ import {
   ApiOperationOptions,
 } from '@nestjs/swagger';
 
-// ─── Standard error schemas ───────────────────────────────────────────────────
+// ─── Standard error schema ─────────────────────────────────────────────────────
+// Mirrors `createFailureResponse()` in `common/interfaces/service-response.interface.ts`,
+// which backs every error response emitted by `HttpExceptionFilter`.
 
 export class ErrorResponseDto {
-  statusCode: number;
-  timestamp: string;
-  path: string;
-  method: string;
-  error: string;
+  success: boolean;
+  message: string;
+  error: Record<string, unknown>;
+  errorType: string;
+  httpCode: number;
 }
 
 // ─── Success wrapper schema ───────────────────────────────────────────────────
+// Mirrors `createSuccessResponse()` / `ServiceResponse<T>`, which backs every
+// success response emitted by `TransformInterceptor`.
 
 export class SuccessResponseDto<T> {
   success: boolean;
+  message: string;
   data: T;
-  timestamp: string;
+  errorType: string;
+  httpCode: number;
 }
 
 // ─── Paginated wrapper schema ─────────────────────────────────────────────────
 
 export class PaginatedResponseDto<T> {
   success: boolean;
+  message: string;
   data: {
     data: T[];
     meta: {
@@ -39,7 +46,8 @@ export class PaginatedResponseDto<T> {
       totalPages: number;
     };
   };
-  timestamp: string;
+  errorType: string;
+  httpCode: number;
 }
 
 // ─── Reusable decorator: wraps a DTO in the standard success envelope ─────────
@@ -114,11 +122,16 @@ export function ApiCommonErrorResponses() {
       description: 'Bad Request — Validation failed or missing required fields',
       schema: {
         example: {
-          statusCode: 400,
-          timestamp: '2024-01-15T10:30:00.000Z',
-          path: '/api/v1/example',
-          method: 'POST',
-          error: 'Validation failed: email must be a valid email address',
+          success: false,
+          message: 'Validation failed: email must be a valid email address',
+          error: {
+            message: ['email must be a valid email address'],
+            statusCode: 400,
+            path: '/api/v1/example',
+            method: 'POST',
+          },
+          errorType: 'HTTP_400',
+          httpCode: 400,
         },
       },
     }),
@@ -127,11 +140,16 @@ export function ApiCommonErrorResponses() {
       description: 'Unauthorized — Invalid or expired token',
       schema: {
         example: {
-          statusCode: 401,
-          timestamp: '2024-01-15T10:30:00.000Z',
-          path: '/api/v1/example',
-          method: 'GET',
-          error: 'Invalid or expired token',
+          success: false,
+          message: 'Invalid or expired token',
+          error: {
+            message: 'Invalid or expired token',
+            statusCode: 401,
+            path: '/api/v1/example',
+            method: 'GET',
+          },
+          errorType: 'HTTP_401',
+          httpCode: 401,
         },
       },
     }),
@@ -140,11 +158,16 @@ export function ApiCommonErrorResponses() {
       description: 'Forbidden — Insufficient permissions',
       schema: {
         example: {
-          statusCode: 403,
-          timestamp: '2024-01-15T10:30:00.000Z',
-          path: '/api/v1/example',
-          method: 'GET',
-          error: 'Missing required permissions: payroll:run',
+          success: false,
+          message: 'Missing required permissions: payroll:run',
+          error: {
+            message: 'Missing required permissions: payroll:run',
+            statusCode: 403,
+            path: '/api/v1/example',
+            method: 'GET',
+          },
+          errorType: 'HTTP_403',
+          httpCode: 403,
         },
       },
     }),
@@ -153,11 +176,16 @@ export function ApiCommonErrorResponses() {
       description: 'Not Found — Resource does not exist for this organization',
       schema: {
         example: {
-          statusCode: 404,
-          timestamp: '2024-01-15T10:30:00.000Z',
-          path: '/api/v1/example/123',
-          method: 'GET',
-          error: 'Resource not found',
+          success: false,
+          message: 'Resource not found',
+          error: {
+            message: 'Resource not found',
+            statusCode: 404,
+            path: '/api/v1/example/123',
+            method: 'GET',
+          },
+          errorType: 'HTTP_404',
+          httpCode: 404,
         },
       },
     }),
@@ -166,11 +194,16 @@ export function ApiCommonErrorResponses() {
       description: 'Conflict — Resource already exists or is in an incompatible state',
       schema: {
         example: {
-          statusCode: 409,
-          timestamp: '2024-01-15T10:30:00.000Z',
-          path: '/api/v1/example',
-          method: 'POST',
-          error: 'A payroll run for 7/2026 already exists for this organization',
+          success: false,
+          message: 'A payroll run for 7/2026 already exists for this organization',
+          error: {
+            message: 'A payroll run for 7/2026 already exists for this organization',
+            statusCode: 409,
+            path: '/api/v1/example',
+            method: 'POST',
+          },
+          errorType: 'HTTP_409',
+          httpCode: 409,
         },
       },
     }),
@@ -179,11 +212,16 @@ export function ApiCommonErrorResponses() {
       description: 'Internal Server Error',
       schema: {
         example: {
-          statusCode: 500,
-          timestamp: '2024-01-15T10:30:00.000Z',
-          path: '/api/v1/example',
-          method: 'GET',
-          error: 'Internal server error',
+          success: false,
+          message: 'Internal server error',
+          error: {
+            message: 'Internal server error',
+            statusCode: 500,
+            path: '/api/v1/example',
+            method: 'GET',
+          },
+          errorType: 'HTTP_500',
+          httpCode: 500,
         },
       },
     }),

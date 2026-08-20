@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsEmail, IsEnum, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 import { CurrencyCode } from '../../../common/enums/currency.enum';
 
@@ -14,6 +15,7 @@ export class UpdateOrganizationDto {
   name?: string;
 
   @ApiPropertyOptional({ example: 'https://cdn.example.com/logo.png' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsUrl()
   @IsOptional()
   logoUrl?: string;
@@ -35,6 +37,7 @@ export class UpdateOrganizationDto {
   email?: string;
 
   @ApiPropertyOptional({ example: 'https://company.com' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsUrl()
   @IsOptional()
   website?: string;

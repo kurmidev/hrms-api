@@ -61,6 +61,11 @@ describe('Performance module (e2e)', () => {
 
       await prisma.performanceRating.deleteMany({ where: { employeeId: { in: employeeIds } } });
       await prisma.performanceCycle.deleteMany({ where: { organizationId } });
+      // EmployeeKpi cascades on employee/kpi delete, but Kpi -> Designation is
+      // NOT cascading (default Restrict), so Kpi rows must be cleared before
+      // designation.deleteMany below or that call throws a FK violation.
+      await prisma.employeeKpi.deleteMany({ where: { employeeId: { in: employeeIds } } });
+      await prisma.kpi.deleteMany({ where: { organizationId } });
       await prisma.userRole.deleteMany({ where: { user: { organizationId } } });
       await prisma.loginHistory.deleteMany({ where: { user: { organizationId } } });
       await prisma.user.deleteMany({ where: { organizationId } });
@@ -107,7 +112,7 @@ describe('Performance module (e2e)', () => {
         organizationId: org.id,
         name: `perf-e2e-admin-${label}`,
         description: 'Test admin role',
-        permissions: ['employee:read', 'payroll:approve'],
+        permissions: ['employee:read', 'performance:read', 'performance:manage'],
         isSystemRole: false,
       },
     });
@@ -116,8 +121,8 @@ describe('Performance module (e2e)', () => {
       data: {
         organizationId: org.id,
         name: `perf-e2e-employee-${label}`,
-        description: 'Test employee role (no payroll:approve)',
-        permissions: ['employee:read'],
+        description: 'Test employee role (no performance:manage)',
+        permissions: ['employee:read', 'performance:read', 'performance:manage'],
         isSystemRole: false,
       },
     });
@@ -605,6 +610,180 @@ describe('Performance module (e2e)', () => {
         .set(authed(orgB.managerToken, orgB.organizationId))
         .send({ employeeId: orgA.subordinateEmployeeId, rating: 3 })
         .expect(404);
+    });
+  });
+
+  // ─── GET /performance/kpis ──────────────────────────────────────────────────
+
+  describe('GET /performance/kpis', () => {
+    let org: OrgFixture;
+    let otherDesignationId: string;
+    let kpiA1: { id: string };
+    let kpiA2: { id: string };
+    let noPermToken: string;
+
+    beforeAll(async () => {
+      org = await createOrgFixture('kpis');
+
+      const otherDesignation = await prisma.designation.create({
+        data: {
+          organizationId: org.organizationId,
+          departmentId: org.departmentId,
+          name: `Other Designation ${uuid()}`,
+        },
+      });
+      otherDesignationId = otherDesignation.id;
+
+      kpiA1 = await prisma.kpi.create({
+        data: {
+          organizationId: org.organizationId,
+          designationId: org.designationId,
+          title: `Sales Target ${uuid()}`,
+          targetValue: 100,
+          unit: 'units',
+        },
+      });
+      kpiA2 = await prisma.kpi.create({
+        data: {
+          organizationId: org.organizationId,
+          designationId: otherDesignationId,
+          title: `Attendance ${uuid()}`,
+          targetValue: 95,
+          unit: '%',
+        },
+      });
+
+      await prisma.employeeKpi.create({
+        data: {
+          employeeId: org.subordinateEmployeeId,
+          kpiId: kpiA1.id,
+          status: 'IN_PROGRESS',
+          achievedValue: 40,
+        },
+      });
+      await prisma.employeeKpi.create({
+        data: {
+          employeeId: org.managerEmployeeId,
+          kpiId: kpiA2.id,
+          status: 'ACHIEVED',
+          achievedValue: 96,
+        },
+      });
+
+      // Role with NO employee:read permission, for the 403 boundary check.
+      const noPermRole = await prisma.role.create({
+        data: {
+          organizationId: org.organizationId,
+          name: `perf-e2e-kpis-noperm-${uuid()}`,
+          description: 'No permissions at all',
+          permissions: [],
+          isSystemRole: false,
+        },
+      });
+      const passwordHash = await bcrypt.hash(PASSWORD, 10);
+      const noPermUser = await prisma.user.create({
+        data: {
+          organizationId: org.organizationId,
+          email: `noperm-kpis-${uuid()}@perf-e2e.test`,
+          passwordHash,
+          isActive: true,
+        },
+      });
+      await prisma.userRole.create({ data: { userId: noPermUser.id, roleId: noPermRole.id } });
+      const login = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: noPermUser.email, password: PASSWORD })
+        .expect(200);
+      noPermToken = login.body.data.accessToken;
+    });
+
+    it('returns the exact documented row shape', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/performance/kpis')
+        .set(authed(org.adminToken, org.organizationId))
+        .expect(200);
+
+      expect(Array.isArray(res.body.data.data)).toBe(true);
+      expect(res.body.data.meta).toBeDefined();
+
+      const row = res.body.data.data.find((r: any) => r.kpiTitle === kpiA1.id || r.employeeId);
+      expect(row).toBeDefined();
+      expect(Object.keys(row).sort()).toEqual(
+        [
+          'id',
+          'employeeId',
+          'employeeName',
+          'designationId',
+          'designationName',
+          'kpiTitle',
+          'targetValue',
+          'unit',
+          'achievedValue',
+          'status',
+        ].sort(),
+      );
+    });
+
+    it('filters by designationId', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/performance/kpis')
+        .query({ designationId: otherDesignationId })
+        .set(authed(org.adminToken, org.organizationId))
+        .expect(200);
+
+      expect(res.body.data.data.length).toBeGreaterThanOrEqual(1);
+      expect(
+        res.body.data.data.every((r: any) => r.designationId === otherDesignationId),
+      ).toBe(true);
+    });
+
+    it('filters by status', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/performance/kpis')
+        .query({ status: 'ACHIEVED' })
+        .set(authed(org.adminToken, org.organizationId))
+        .expect(200);
+
+      expect(res.body.data.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data.data.every((r: any) => r.status === 'ACHIEVED')).toBe(true);
+    });
+
+    it('paginates with correct meta', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/performance/kpis')
+        .query({ page: 1, limit: 1 })
+        .set(authed(org.adminToken, org.organizationId))
+        .expect(200);
+
+      expect(res.body.data.data.length).toBe(1);
+      expect(res.body.data.meta.page).toBe(1);
+      expect(res.body.data.meta.limit).toBe(1);
+      expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
+    });
+
+    it('rejects unauthenticated requests (401)', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/performance/kpis')
+        .set('X-Organization-ID', org.organizationId)
+        .expect(401);
+    });
+
+    it('rejects requests missing the employee:read permission (403)', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/performance/kpis')
+        .set(authed(noPermToken, org.organizationId))
+        .expect(403);
+    });
+
+    it("org B never sees org A's KPI assignments (multi-tenancy)", async () => {
+      const orgB = await createOrgFixture('kpis-tenant-b');
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/performance/kpis')
+        .set(authed(orgB.adminToken, orgB.organizationId))
+        .expect(200);
+      expect(res.body.data.data.some((r: any) => r.employeeId === org.subordinateEmployeeId)).toBe(
+        false,
+      );
     });
   });
 });

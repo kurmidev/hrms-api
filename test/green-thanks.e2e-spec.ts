@@ -97,7 +97,15 @@ describe('Green Thanks module (e2e)', () => {
         organizationId: org.id,
         name: `gt-e2e-approver-${label}`,
         description: 'Test approver role',
-        permissions: ['profile:read', 'leave:approve', 'payroll:read', 'payroll:run'],
+        permissions: [
+          'profile:read',
+          'leave:approve',
+          'payroll:read',
+          'payroll:run',
+          'green_thanks:read',
+          'green_thanks:create',
+          'green_thanks:manage',
+        ],
         isSystemRole: false,
       },
     });
@@ -106,8 +114,8 @@ describe('Green Thanks module (e2e)', () => {
       data: {
         organizationId: org.id,
         name: `gt-e2e-employee-${label}`,
-        description: 'Test employee role (profile:read only)',
-        permissions: ['profile:read'],
+        description: 'Test employee role (profile:read + green_thanks:read/create, no leave:approve)',
+        permissions: ['profile:read', 'green_thanks:read', 'green_thanks:create'],
         isSystemRole: false,
       },
     });
@@ -444,7 +452,7 @@ describe('Green Thanks module (e2e)', () => {
       expect(res.body.message).toMatch(/pending/i);
     });
 
-    it('a non-privileged (profile:read only) user gets 403 on approve', async () => {
+    it('a non-privileged (no leave:approve) user gets 403 on approve', async () => {
       const sendRes = await request(app.getHttpServer())
         .post('/api/v1/green-thanks')
         .set(authed(org.senderToken, org.organizationId))

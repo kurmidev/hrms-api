@@ -396,6 +396,7 @@ model Organization {
   dashboardConfigs  DashboardConfig[]
   workLocations     WorkLocation[]
   odRecords         OdRecord[]
+  kpis              Kpi[]
 
   @@map("organizations")
 }
@@ -528,6 +529,7 @@ model Designation {
   department       Department        @relation(fields: [departmentId], references: [id])
   payrollStructure PayrollStructure? @relation("DesignationPayrollStructure", fields: [payrollStructureId], references: [id])
   employees        Employee[]
+  kpis             Kpi[]
 
   @@map("designations")
 }
@@ -649,6 +651,7 @@ model Employee {
   employeeInsurance   EmployeeInsurance[]
   reminders           Reminder[]
   onboardingLink      OnboardingLink?
+  employeeKpis        EmployeeKpi[]
 
   @@unique([organizationId, empCode])
   @@map("employees")
@@ -1269,6 +1272,52 @@ model PerformanceRating {
 
   @@unique([cycleId, employeeId])
   @@map("performance_ratings")
+}
+
+model Kpi {
+  id             String   @id @default(uuid())
+  organizationId String
+  designationId  String
+  title          String
+  description    String?  @db.Text
+  targetValue    Float?
+  unit           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  designation  Designation   @relation(fields: [designationId], references: [id])
+  assignments  EmployeeKpi[]
+
+  @@unique([organizationId, designationId, title])
+  @@map("kpis")
+}
+
+enum EmployeeKpiStatus {
+  PENDING
+  IN_PROGRESS
+  ACHIEVED
+  MISSED
+}
+
+model EmployeeKpi {
+  id            String            @id @default(uuid())
+  employeeId    String
+  kpiId         String
+  achievedValue Float?
+  status        EmployeeKpiStatus @default(PENDING)
+  assignedAt    DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  createdById   String?
+  updatedById   String?
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  kpi      Kpi      @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, kpiId])
+  @@map("employee_kpis")
 }
 
 // ─── SERVICE REQUESTS ─────────────────────────────────────────────────────────

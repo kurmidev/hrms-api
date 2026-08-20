@@ -248,7 +248,7 @@ describe('Loans module (e2e)', () => {
       // Actual envelope (see TransformInterceptor) is { status, message, data }
       // NOT { success, data, timestamp } as CLAUDE.md's Response Pipeline section
       // claims — verified against the real running response, see known-issues.md.
-      expect(res.body.status).toBe(true);
+      expect(res.body.success).toBe(true);
       expect(res.body.data.status).toBe('PENDING');
       expect(res.body.data.employeeId).toBe(org.employeeId);
       expect(res.body.data.amountRequested).toBe(60000);

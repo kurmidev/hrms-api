@@ -32,7 +32,7 @@ export class GreenThanksController {
   constructor(private readonly greenThanksService: GreenThanksService) {}
 
   @Post()
-  @RequirePermissions('profile:read')
+  @RequirePermissions('green_thanks:create')
   @ApiOperation({ summary: 'Send Green Thanks points to another employee' })
   @ApiSuccessResponse(GreenThanksResponseDto, 'Green Thanks sent', 201)
   create(
@@ -44,7 +44,7 @@ export class GreenThanksController {
   }
 
   @Get()
-  @RequirePermissions('profile:read')
+  @RequirePermissions('green_thanks:read')
   @ApiOperation({
     summary: 'List Green Thanks entries (paginated)',
     description:
@@ -63,7 +63,7 @@ export class GreenThanksController {
 
   @Put(':id/approve')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('leave:approve')
+  @RequirePermissions('green_thanks:create')
   @ApiOperation({ summary: 'Approve or reject a pending Green Thanks entry' })
   @ApiParam({ name: 'id', description: 'GreenThanks UUID' })
   @ApiSuccessResponse(GreenThanksResponseDto, 'Green Thanks entry approved or rejected')
