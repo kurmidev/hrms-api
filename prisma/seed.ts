@@ -1,5 +1,6 @@
 import { LeaveType, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { DEFAULT_DASHBOARDS } from '../src/modules/dashboard/dashboard.service';
 
 const prisma = new PrismaClient();
 
@@ -464,6 +465,50 @@ async function seedEmployeeKpis(prisma: PrismaClient, organizationId: string) {
   );
 }
 
+/**
+ * Idempotently seeds the role-default dashboards (DashboardConfig + widgets)
+ * for an organization — mirrors DashboardService.seedDefaults() logic (kept
+ * separate here because seed.ts runs as a standalone ts-node script against
+ * a plain PrismaClient, not the NestJS-DI PrismaService). The widget data
+ * itself is imported from dashboard.service.ts so there is a single source
+ * of truth for DEFAULT_DASHBOARDS.
+ */
+async function seedDashboardDefaults(prisma: PrismaClient, organizationId: string) {
+  let created = 0;
+  let skipped = 0;
+
+  for (const def of DEFAULT_DASHBOARDS) {
+    const existing = await prisma.dashboardConfig.findFirst({
+      where: { organizationId, roleName: def.roleName, isDefault: true },
+    });
+
+    if (existing) {
+      skipped += 1;
+      continue;
+    }
+
+    await prisma.dashboardConfig.create({
+      data: {
+        organizationId,
+        name: def.name,
+        roleName: def.roleName,
+        isDefault: true,
+        widgets: {
+          create: def.widgets.map((w) => ({
+            widgetType: w.widgetType,
+            title: w.title,
+            position: w.position,
+            colSpan: w.colSpan,
+          })),
+        },
+      },
+    });
+    created += 1;
+  }
+
+  console.log(`  Default dashboards seeded: ${created} created, ${skipped} already existed`);
+}
+
 async function seedPlatformAdmin(prisma: PrismaClient) {
   const hash = await bcrypt.hash('', 10);
   await prisma.platformAdmin.upsert({
@@ -554,6 +599,7 @@ async function main() {
   }
 
   await seedDefaultLeavePolicies(prisma, org.id);
+  await seedDashboardDefaults(prisma, org.id);
   await seedSubscriptionPlans(prisma);
   await seedPlatformAdmin(prisma);
 

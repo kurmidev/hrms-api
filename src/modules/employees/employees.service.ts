@@ -59,8 +59,9 @@ export class EmployeesService {
   ) {}
 
   async create(organizationId: string, dto: CreateEmployeeDto, createdById: string) {
-    // Validate dept, designation, and optional manager all belong to this org
-    const [dept, designation, manager] = await Promise.all([
+    // TODO: same "LeaveBalance never initialized" bug as the onboarding-approve flow (see OnboardingService.approve) affects this direct-create path too — out of scope here, needs its own fix.
+    // Validate dept, designation, payroll structure, leave policy, and optional manager all belong to this org
+    const [dept, designation, payrollStructure, leavePolicy, manager] = await Promise.all([
       this.prisma.department.findFirst({
         where: { id: dto.departmentId, organizationId, deletedAt: null },
         select: { id: true },
@@ -69,6 +70,16 @@ export class EmployeesService {
         where: { id: dto.designationId, organizationId, deletedAt: null },
         select: { id: true },
       }),
+      this.prisma.payrollStructure.findFirst({
+        where: { id: dto.payrollStructureId, organizationId, deletedAt: null },
+        select: { id: true },
+      }),
+      dto.leavePolicyId
+        ? this.prisma.leavePolicy.findFirst({
+            where: { id: dto.leavePolicyId, organizationId, deletedAt: null },
+            select: { id: true },
+          })
+        : Promise.resolve(true),
       dto.reportingManagerId
         ? this.prisma.employee.findFirst({
             where: { id: dto.reportingManagerId, organizationId, deletedAt: null },
@@ -84,6 +95,14 @@ export class EmployeesService {
     if (!designation)
       throw new BadRequestException(
         `Designation ${dto.designationId} not found in this organization`,
+      );
+    if (!payrollStructure)
+      throw new BadRequestException(
+        `Payroll structure ${dto.payrollStructureId} not found in this organization`,
+      );
+    if (!leavePolicy)
+      throw new BadRequestException(
+        `Leave policy ${dto.leavePolicyId} not found in this organization`,
       );
     if (!manager)
       throw new BadRequestException(
@@ -308,6 +327,28 @@ export class EmployeesService {
       if (!mgr)
         throw new BadRequestException(
           `Reporting manager ${dto.reportingManagerId} not found in this organization`,
+        );
+    }
+
+    if (dto.payrollStructureId) {
+      const structure = await this.prisma.payrollStructure.findFirst({
+        where: { id: dto.payrollStructureId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!structure)
+        throw new BadRequestException(
+          `Payroll structure ${dto.payrollStructureId} not found in this organization`,
+        );
+    }
+
+    if (dto.leavePolicyId) {
+      const policy = await this.prisma.leavePolicy.findFirst({
+        where: { id: dto.leavePolicyId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!policy)
+        throw new BadRequestException(
+          `Leave policy ${dto.leavePolicyId} not found in this organization`,
         );
     }
 

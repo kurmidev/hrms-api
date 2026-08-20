@@ -41,8 +41,29 @@ export class DashboardController {
   @ApiSuccessResponse(Object, 'Dashboard configuration for the current user')
   findForUser(@Request() req) {
     const { id, organizationId } = req.user;
-    const roleName = req.user.permissions?.includes('*') ? 'super_admin' : 'employee';
+    const roleName = this.resolveRoleName(req.user.roles ?? []);
     return this.service.findForUser(id, organizationId, roleName);
+  }
+
+  /**
+   * Derives the effective dashboard "roleName" for a user who may hold
+   * multiple roles, in highest-privilege-wins priority order — matching the
+   * exact roleName set defined in DEFAULT_DASHBOARDS (dashboard.service.ts).
+   * Falls back to 'employee' if none of the user's roles match a known
+   * dashboard roleName.
+   */
+  private resolveRoleName(userRoles: string[]): string {
+    const priority = [
+      'super_admin',
+      'org_admin',
+      'hr_manager',
+      'finance_manager',
+      'dept_manager',
+      'it_admin',
+      'field_supervisor',
+      'employee',
+    ];
+    return priority.find((role) => userRoles.includes(role)) ?? 'employee';
   }
 
   @Get('defaults')

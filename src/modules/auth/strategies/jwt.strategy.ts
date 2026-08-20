@@ -47,6 +47,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Flatten all permissions from all assigned roles
     const permissions = user.userRoles.flatMap((ur) => (ur.role.permissions as string[]) || []);
+    const roles = user.userRoles.map((ur) => ur.role.name);
 
     return {
       id: user.id,
@@ -55,6 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       organizationId: payload.organizationId,
       mustChangePassword: user.mustChangePassword,
       permissions: [...new Set(permissions)],
+      roles: [...new Set(roles)],
       employeeId: user.employee?.id ?? null,
       employee: user.employee
         ? {

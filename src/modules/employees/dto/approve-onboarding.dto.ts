@@ -29,9 +29,16 @@ export class ApproveOnboardingDto {
   @IsUUID()
   payrollStructureId: string;
 
-  @ApiProperty({ description: 'Leave policy UUID (must be active)' })
-  @IsUUID()
-  leavePolicyId: string;
+  @ApiProperty({
+    description:
+      'One or more leave policy UUIDs (each must be active). The first id is set as the ' +
+      "employee's primary Employee.leavePolicyId; a LeaveBalance row is initialized for EVERY id.",
+    type: [String],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ArrayMinSize(1)
+  leavePolicyIds: string[];
 
   @ApiProperty({ enum: EmploymentType })
   @IsEnum(EmploymentType)

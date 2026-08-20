@@ -19,6 +19,7 @@ import { RequestChangesDto } from '../dto/request-changes.dto';
 import { ApproveOnboardingDto } from '../dto/approve-onboarding.dto';
 import { PaginationDto, paginate } from '../../../common/dto/pagination.dto';
 import { OnboardingLinkQueryDto } from '../dto/onboarding-link-query.dto';
+import { LeaveBalanceService } from '../../leave/leave-balance.service';
 
 interface SubmissionDetails {
   firstName: string;
@@ -52,6 +53,7 @@ export class OnboardingService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('onboarding') private readonly onboardingQueue: Queue,
+    private readonly leaveBalanceService: LeaveBalanceService,
   ) {}
 
   // ── HR: Generate invite link ──────────────────────────────────────────────
@@ -238,7 +240,7 @@ export class OnboardingService {
           departmentId: dto.departmentId,
           designationId: dto.designationId,
           payrollStructureId: dto.payrollStructureId,
-          leavePolicyId: dto.leavePolicyId,
+          leavePolicyId: dto.leavePolicyIds[0],
           empCode,
           firstName: details.firstName,
           lastName: details.lastName,
@@ -314,6 +316,15 @@ export class OnboardingService {
 
       return { employee: emp, user: usr };
     });
+
+    // Initialize a LeaveBalance row for EVERY selected leave policy — this is
+    // the real fix for the "Insufficient leave balance" bug (see rule §1 /
+    // known-issues.md 2026-08-20): LeaveBalanceService.initializeForEmployee
+    // was previously never called from any code path.
+    const currentYear = new Date().getFullYear();
+    for (const leavePolicyId of dto.leavePolicyIds) {
+      await this.leaveBalanceService.initializeForEmployee(employee.id, leavePolicyId, currentYear);
+    }
 
     // After transaction: enqueue welcome email (non-blocking)
     await this.onboardingQueue.add('onboarding.welcome', {
@@ -625,7 +636,7 @@ export class OnboardingService {
   }
 
   private async validateActivationPayload(organizationId: string, dto: ApproveOnboardingDto) {
-    const [dept, designation, roles, payroll, leave] = await Promise.all([
+    const [dept, designation, roles, payroll, leavePolicies] = await Promise.all([
       this.prisma.department.findFirst({
         where: { id: dto.departmentId, organizationId, deletedAt: null },
       }),
@@ -641,8 +652,13 @@ export class OnboardingService {
       this.prisma.payrollStructure.findFirst({
         where: { id: dto.payrollStructureId, organizationId, deletedAt: null },
       }),
-      this.prisma.leavePolicy.findFirst({
-        where: { id: dto.leavePolicyId, organizationId, isActive: true, deletedAt: null },
+      this.prisma.leavePolicy.findMany({
+        where: {
+          id: { in: dto.leavePolicyIds },
+          organizationId,
+          isActive: true,
+          deletedAt: null,
+        },
       }),
     ]);
 
@@ -652,8 +668,10 @@ export class OnboardingService {
     if (roles.length !== dto.roleIds.length)
       throw new BadRequestException('One or more roles not found in this organization');
     if (!payroll) throw new BadRequestException('Payroll structure not found in this organization');
-    if (!leave)
-      throw new BadRequestException('Leave policy not found or inactive in this organization');
+    if (leavePolicies.length !== dto.leavePolicyIds.length)
+      throw new BadRequestException(
+        'One or more leave policies not found or inactive in this organization',
+      );
 
     if (dto.reportingManagerId) {
       const manager = await this.prisma.employee.findFirst({

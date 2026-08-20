@@ -8318,6 +8318,714 @@
         ]
       }
     },
+    "/api/v1/leave/policies": {
+      "get": {
+        "operationId": "LeaveController_findAllPolicies",
+        "summary": "List leave policies",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "leaveType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CASUAL",
+                "SICK",
+                "EARNED",
+                "LOSS_OF_PAY",
+                "MATERNITY",
+                "PATERNITY",
+                "COMPENSATORY"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "LeaveController_createPolicy",
+        "summary": "Create a leave policy",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLeavePolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/policies/{id}": {
+      "put": {
+        "operationId": "LeaveController_updatePolicy",
+        "summary": "Update a leave policy",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Leave policy UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLeavePolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/policies/{id}/toggle": {
+      "put": {
+        "operationId": "LeaveController_togglePolicy",
+        "summary": "Toggle a leave policy active/inactive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Leave policy UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/balances": {
+      "get": {
+        "operationId": "LeaveController_getBalances",
+        "summary": "List leave balances (HR view, paginated)",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 2026,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/my-balance": {
+      "get": {
+        "operationId": "LeaveController_getMyBalance",
+        "summary": "Get my own leave balances for the current year",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/my": {
+      "get": {
+        "operationId": "LeaveController_myApplications",
+        "summary": "List my own leave applications",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-07-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-07-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/apply": {
+      "post": {
+        "operationId": "LeaveController_apply",
+        "summary": "Apply for leave",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyLeaveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave": {
+      "get": {
+        "operationId": "LeaveController_findAll",
+        "summary": "List leave applications (HR/manager view, paginated)",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-07-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-07-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/{id}/cancel": {
+      "put": {
+        "operationId": "LeaveController_cancel",
+        "summary": "Cancel my own pending leave application",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "LeaveApplication UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/{id}/approve": {
+      "put": {
+        "operationId": "LeaveController_approve",
+        "summary": "Approve a pending leave application",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "LeaveApplication UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveLeaveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/{id}/reject": {
+      "put": {
+        "operationId": "LeaveController_reject",
+        "summary": "Reject a pending leave application",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "LeaveApplication UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectLeaveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/holidays": {
+      "get": {
+        "operationId": "LeaveController_findAllHolidays",
+        "summary": "List organization holidays",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "description": "Filter holidays to this calendar year. Omit to return all years.",
+            "schema": {
+              "minimum": 2000,
+              "maximum": 2100,
+              "example": 2026,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "LeaveController_createHoliday",
+        "summary": "Create a holiday",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHolidayDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/holidays/{id}": {
+      "put": {
+        "operationId": "LeaveController_updateHoliday",
+        "summary": "Update a holiday",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Holiday UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHolidayDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "LeaveController_deleteHoliday",
+        "summary": "Delete a holiday",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Holiday UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/platform/auth/login": {
       "post": {
         "operationId": "PlatformAuthController_login",
@@ -11138,714 +11846,6 @@
         },
         "tags": [
           "Attendance"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/policies": {
-      "get": {
-        "operationId": "LeaveController_findAllPolicies",
-        "summary": "List leave policies",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "leaveType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "CASUAL",
-                "SICK",
-                "EARNED",
-                "LOSS_OF_PAY",
-                "MATERNITY",
-                "PATERNITY",
-                "COMPENSATORY"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "isActive",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      },
-      "post": {
-        "operationId": "LeaveController_createPolicy",
-        "summary": "Create a leave policy",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateLeavePolicyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/policies/{id}": {
-      "put": {
-        "operationId": "LeaveController_updatePolicy",
-        "summary": "Update a leave policy",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Leave policy UUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateLeavePolicyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/policies/{id}/toggle": {
-      "put": {
-        "operationId": "LeaveController_togglePolicy",
-        "summary": "Toggle a leave policy active/inactive",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Leave policy UUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/balances": {
-      "get": {
-        "operationId": "LeaveController_getBalances",
-        "summary": "List leave balances (HR view, paginated)",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "employeeId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "year",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": 2026,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/my-balance": {
-      "get": {
-        "operationId": "LeaveController_getMyBalance",
-        "summary": "Get my own leave balances for the current year",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/my": {
-      "get": {
-        "operationId": "LeaveController_myApplications",
-        "summary": "List my own leave applications",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "PENDING",
-                "APPROVED",
-                "REJECTED",
-                "CANCELLED"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "employeeId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "fromDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "2026-07-01",
-              "type": "string"
-            }
-          },
-          {
-            "name": "toDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "2026-07-31",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/apply": {
-      "post": {
-        "operationId": "LeaveController_apply",
-        "summary": "Apply for leave",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplyLeaveDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave": {
-      "get": {
-        "operationId": "LeaveController_findAll",
-        "summary": "List leave applications (HR/manager view, paginated)",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "PENDING",
-                "APPROVED",
-                "REJECTED",
-                "CANCELLED"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "employeeId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "fromDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "2026-07-01",
-              "type": "string"
-            }
-          },
-          {
-            "name": "toDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "2026-07-31",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/{id}/cancel": {
-      "put": {
-        "operationId": "LeaveController_cancel",
-        "summary": "Cancel my own pending leave application",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "LeaveApplication UUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/{id}/approve": {
-      "put": {
-        "operationId": "LeaveController_approve",
-        "summary": "Approve a pending leave application",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "LeaveApplication UUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApproveLeaveDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/{id}/reject": {
-      "put": {
-        "operationId": "LeaveController_reject",
-        "summary": "Reject a pending leave application",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "LeaveApplication UUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectLeaveDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/holidays": {
-      "get": {
-        "operationId": "LeaveController_findAllHolidays",
-        "summary": "List organization holidays",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "year",
-            "required": false,
-            "in": "query",
-            "description": "Filter holidays to this calendar year. Omit to return all years.",
-            "schema": {
-              "minimum": 2000,
-              "maximum": 2100,
-              "example": 2026,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      },
-      "post": {
-        "operationId": "LeaveController_createHoliday",
-        "summary": "Create a holiday",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateHolidayDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/leave/holidays/{id}": {
-      "put": {
-        "operationId": "LeaveController_updateHoliday",
-        "summary": "Update a holiday",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Holiday UUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateHolidayDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      },
-      "delete": {
-        "operationId": "LeaveController_deleteHoliday",
-        "summary": "Delete a holiday",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Holiday UUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Leave"
         ],
         "security": [
           {
@@ -32066,9 +32066,12 @@
             "type": "string",
             "description": "Payroll structure UUID"
           },
-          "leavePolicyId": {
-            "type": "string",
-            "description": "Leave policy UUID (must be active)"
+          "leavePolicyIds": {
+            "description": "One or more leave policy UUIDs (each must be active). The first id is set as the employee's primary Employee.leavePolicyId; a LeaveBalance row is initialized for EVERY id.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "employmentType": {
             "type": "string",
@@ -32103,7 +32106,7 @@
           "designationId",
           "roleIds",
           "payrollStructureId",
-          "leavePolicyId",
+          "leavePolicyIds",
           "employmentType",
           "joiningDate"
         ]
@@ -32351,6 +32354,102 @@
           "content": {
             "type": "string",
             "example": "Hey, are you free for a quick call?"
+          }
+        }
+      },
+      "ApplyLeaveDto": {
+        "type": "object",
+        "properties": {
+          "leavePolicyId": {
+            "type": "string",
+            "description": "Leave policy UUID"
+          },
+          "fromDate": {
+            "type": "string",
+            "example": "2026-08-01"
+          },
+          "toDate": {
+            "type": "string",
+            "example": "2026-08-02"
+          },
+          "days": {
+            "type": "number",
+            "minimum": 0.5,
+            "example": 2
+          },
+          "reason": {
+            "type": "string",
+            "example": "Family function"
+          }
+        },
+        "required": [
+          "leavePolicyId",
+          "fromDate",
+          "toDate",
+          "days"
+        ]
+      },
+      "ApproveLeaveDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string",
+            "example": "Approved, enjoy your leave"
+          }
+        }
+      },
+      "RejectLeaveDto": {
+        "type": "object",
+        "properties": {
+          "rejectionNote": {
+            "type": "string",
+            "minLength": 3,
+            "example": "Insufficient staffing on requested dates"
+          }
+        },
+        "required": [
+          "rejectionNote"
+        ]
+      },
+      "CreateHolidayDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "Independence Day"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-08-15"
+          },
+          "type": {
+            "type": "string",
+            "example": "national",
+            "default": "national"
+          }
+        },
+        "required": [
+          "name",
+          "date"
+        ]
+      },
+      "UpdateHolidayDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "Independence Day"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-08-15"
+          },
+          "type": {
+            "type": "string",
+            "example": "national",
+            "default": "national"
           }
         }
       },
@@ -32988,102 +33087,6 @@
           },
           "notes": {
             "type": "string"
-          }
-        }
-      },
-      "ApplyLeaveDto": {
-        "type": "object",
-        "properties": {
-          "leavePolicyId": {
-            "type": "string",
-            "description": "Leave policy UUID"
-          },
-          "fromDate": {
-            "type": "string",
-            "example": "2026-08-01"
-          },
-          "toDate": {
-            "type": "string",
-            "example": "2026-08-02"
-          },
-          "days": {
-            "type": "number",
-            "minimum": 0.5,
-            "example": 2
-          },
-          "reason": {
-            "type": "string",
-            "example": "Family function"
-          }
-        },
-        "required": [
-          "leavePolicyId",
-          "fromDate",
-          "toDate",
-          "days"
-        ]
-      },
-      "ApproveLeaveDto": {
-        "type": "object",
-        "properties": {
-          "notes": {
-            "type": "string",
-            "example": "Approved, enjoy your leave"
-          }
-        }
-      },
-      "RejectLeaveDto": {
-        "type": "object",
-        "properties": {
-          "rejectionNote": {
-            "type": "string",
-            "minLength": 3,
-            "example": "Insufficient staffing on requested dates"
-          }
-        },
-        "required": [
-          "rejectionNote"
-        ]
-      },
-      "CreateHolidayDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 100,
-            "example": "Independence Day"
-          },
-          "date": {
-            "type": "string",
-            "example": "2026-08-15"
-          },
-          "type": {
-            "type": "string",
-            "example": "national",
-            "default": "national"
-          }
-        },
-        "required": [
-          "name",
-          "date"
-        ]
-      },
-      "UpdateHolidayDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 100,
-            "example": "Independence Day"
-          },
-          "date": {
-            "type": "string",
-            "example": "2026-08-15"
-          },
-          "type": {
-            "type": "string",
-            "example": "national",
-            "default": "national"
           }
         }
       },

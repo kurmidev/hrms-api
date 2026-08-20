@@ -12,20 +12,20 @@ import { CreateDashboardDto } from './dto/create-dashboard.dto';
 import { UpdateDashboardDto } from './dto/update-dashboard.dto';
 import { DashboardKpisDto } from './dto/dashboard-kpis.dto';
 
-interface DefaultWidget {
+export interface DefaultWidget {
   widgetType: string;
   title: string;
   position: number;
   colSpan: number;
 }
 
-interface DefaultDashboard {
+export interface DefaultDashboard {
   name: string;
   roleName: string;
   widgets: DefaultWidget[];
 }
 
-const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
+export const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
   {
     name: 'Admin Dashboard',
     roleName: 'org_admin',

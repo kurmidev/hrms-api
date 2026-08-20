@@ -11,6 +11,7 @@ import { OnboardingScheduler } from './onboarding/onboarding.scheduler';
 import { OnboardingProcessor } from './jobs/onboarding.processor';
 import { EmployeesProcessor } from './jobs/employees.processor';
 import { ChatModule } from '../chat/chat.module';
+import { LeaveModule } from '../leave/leave.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ChatModule } from '../chat/chat.module';
     BullModule.registerQueue({ name: 'employees' }),
     MulterModule.register({ storage: memoryStorage() }),
     ChatModule,
+    LeaveModule,
   ],
   controllers: [EmployeesController, OnboardingController, OnboardingPublicController],
   providers: [

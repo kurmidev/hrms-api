@@ -300,6 +300,50 @@ function writeReportFile(report: ImportReport): void {
   fs.writeFileSync(REPORT_PATH, lines.join('\n') + '\n', 'utf-8');
 }
 
+/**
+ * Idempotently grants an ADDITIONAL manager-tier role to two of the seeded
+ * employees (keeping their base `employee` role), so there are real test
+ * logins for QA/manual testing of finance/manager-gated features
+ * (payroll structure create, leave/todo approvals, etc.) without needing to
+ * hand-create users. Safe to re-run — uses findFirst-else-create on
+ * UserRole.
+ */
+async function seedManagerTestLogins(organizationId: string): Promise<void> {
+  const grants: Array<{ email: string; roleName: string }> = [
+    { email: 'ali1708@igreentec.in', roleName: 'finance_manager' },
+    { email: 'aru1675@igreentec.in', roleName: 'dept_manager' },
+  ];
+
+  for (const grant of grants) {
+    const user = await prisma.user.findFirst({
+      where: { organizationId, email: grant.email },
+    });
+    if (!user) {
+      console.log(`  [SKIP] manager-role grant — user ${grant.email} not found`);
+      continue;
+    }
+
+    const role = await prisma.role.findFirst({
+      where: { organizationId, name: grant.roleName },
+    });
+    if (!role) {
+      console.log(`  [SKIP] manager-role grant — role "${grant.roleName}" not found`);
+      continue;
+    }
+
+    const existingGrant = await prisma.userRole.findFirst({
+      where: { userId: user.id, roleId: role.id },
+    });
+    if (existingGrant) {
+      console.log(`  [OK] ${grant.email} already holds role "${grant.roleName}"`);
+      continue;
+    }
+
+    await prisma.userRole.create({ data: { userId: user.id, roleId: role.id } });
+    console.log(`  [OK] Granted role "${grant.roleName}" to ${grant.email}`);
+  }
+}
+
 async function main(): Promise<void> {
   console.log('Starting CSV employee/payroll import...');
 
@@ -472,6 +516,9 @@ async function main(): Promise<void> {
   }
 
   writeReportFile(report);
+
+  console.log('\nGranting manager/finance test-login roles...');
+  await seedManagerTestLogins(org.id);
 
   console.log('\nImport complete.');
   console.log(`Total rows processed: ${report.totalRows}`);
