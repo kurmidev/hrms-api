@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'hrms-backend',
       cwd: __dirname,
-      script: 'dist/main.js',
+      script: 'dist/src/main.js',
       // Single instance (fork mode), not cluster: the BullMQ onboarding
       // scheduler runs cron-based jobs (link expiry, reminders) with no
       // distributed lock — running >1 instance would fire those jobs
