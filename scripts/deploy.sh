@@ -30,8 +30,14 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-echo "==> [backend] Installing dependencies (npm ci)"
-npm ci
+echo "==> [backend] Installing dependencies (npm ci --include=dev)"
+# --include=dev is required even in production: the prisma CLI, ts-node, and
+# tsconfig-paths are all devDependencies, but this script (and the seed
+# scripts) need them at deploy time. If NODE_ENV=production is set in the
+# shell (common on prod hosts), a plain `npm ci` silently skips
+# devDependencies and every `prisma`/`ts-node` invocation below fails with
+# "command not found".
+npm ci --include=dev
 
 echo "==> [backend] Generating Prisma client"
 npx prisma generate
