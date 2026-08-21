@@ -31,6 +31,10 @@ export class OnboardingController {
     description:
       'Creates a secure onboarding link and dispatches SMS + email invite to the candidate.',
   })
+  @ApiResponse({ status: 201, description: 'Onboarding link created and invite dispatched' })
+  @ApiResponse({ status: 400, description: 'Validation error in the request body' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:create' })
   create(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') hrUserId: string,
@@ -45,6 +49,21 @@ export class OnboardingController {
     summary: 'List onboarding links',
     description: 'Paginated list. Filter by ?status=SUBMITTED.',
   })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated onboarding links',
+    schema: {
+      example: {
+        success: true,
+        message: 'Success',
+        data: { data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } },
+        errorType: null,
+        httpCode: 200,
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:read' })
   findAll(
     @CurrentUser('organizationId') organizationId: string,
     @Query() query: OnboardingLinkQueryDto,
@@ -56,6 +75,10 @@ export class OnboardingController {
   @RequirePermissions('employee:read')
   @ApiOperation({ summary: 'Get onboarding link detail with transition history' })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
+  @ApiResponse({ status: 200, description: 'Onboarding link detail with transition history' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:read' })
+  @ApiResponse({ status: 404, description: 'Onboarding link not found in this organization' })
   findOne(@CurrentUser('organizationId') organizationId: string, @Param('id') id: string) {
     return this.onboardingService.findLinkById(organizationId, id);
   }
@@ -68,6 +91,11 @@ export class OnboardingController {
     description: 'Transitions SUBMITTED → UNDER_REVIEW.',
   })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
+  @ApiResponse({ status: 200, description: 'Link transitioned to UNDER_REVIEW' })
+  @ApiResponse({ status: 400, description: 'Link is not in a state that allows this transition' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:update' })
+  @ApiResponse({ status: 404, description: 'Onboarding link not found in this organization' })
   markUnderReview(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') hrUserId: string,
@@ -84,6 +112,11 @@ export class OnboardingController {
     description: 'Transitions UNDER_REVIEW → CHANGES_REQUESTED.',
   })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
+  @ApiResponse({ status: 200, description: 'Link transitioned to CHANGES_REQUESTED' })
+  @ApiResponse({ status: 400, description: 'Link is not in a state that allows this transition' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:update' })
+  @ApiResponse({ status: 404, description: 'Onboarding link not found in this organization' })
   requestChanges(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') hrUserId: string,
@@ -101,6 +134,11 @@ export class OnboardingController {
     description: 'Transitions UNDER_REVIEW → REJECTED. Terminal state.',
   })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
+  @ApiResponse({ status: 200, description: 'Link transitioned to REJECTED' })
+  @ApiResponse({ status: 400, description: 'Link is not in a state that allows this transition' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:update' })
+  @ApiResponse({ status: 404, description: 'Onboarding link not found in this organization' })
   reject(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') hrUserId: string,
@@ -116,9 +154,26 @@ export class OnboardingController {
   @ApiOperation({
     summary: 'Approve + Activate — creates Employee + User in one transaction',
     description:
-      'Combined approve and activate. HR must supply all 5 system assignments (department, designation, roles, payroll structure, leave policy). Creates the Employee and User records atomically, then sends the welcome email with temp credentials.',
+      'Combined approve and activate. HR must supply all 5 system assignments (department, ' +
+      'designation, roles, payroll structure, one or more leave policies via `leavePolicyIds`). ' +
+      'The first entry in `leavePolicyIds` becomes the primary `Employee.leavePolicyId`; a ' +
+      'LeaveBalance row is initialized for every listed policy. Creates the Employee and User ' +
+      'records atomically, then sends the welcome email with temp credentials.',
   })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Employee approved and activated; Employee + User records created',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Validation error (e.g. empty leavePolicyIds), an id does not reference an active ' +
+      'record in this organization, or the link is not in a state that allows approval',
+  })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:create' })
+  @ApiResponse({ status: 404, description: 'Onboarding link not found in this organization' })
   approve(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') hrUserId: string,
@@ -162,6 +217,11 @@ export class OnboardingController {
     description: 'Marks a PENDING or IN_PROGRESS link as EXPIRED.',
   })
   @ApiParam({ name: 'id', description: 'Onboarding link UUID' })
+  @ApiResponse({ status: 200, description: 'Link revoked (marked EXPIRED)' })
+  @ApiResponse({ status: 400, description: 'Link is not in a state that allows revocation' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 403, description: 'Missing permission: employee:delete' })
+  @ApiResponse({ status: 404, description: 'Onboarding link not found in this organization' })
   revoke(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') hrUserId: string,

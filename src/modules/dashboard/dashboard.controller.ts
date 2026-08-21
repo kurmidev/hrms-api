@@ -36,7 +36,12 @@ export class DashboardController {
     summary: "Get the current user's dashboard",
     description:
       'Returns the dashboard configuration (widgets and layout) assigned to the requesting ' +
-      'user, falling back to the role-default dashboard for their org if none is personalized.',
+      'user, falling back to the role-default dashboard for their org if none is personalized. ' +
+      'The JWT payload carries `roles: string[]` (a user may hold multiple roles); the ' +
+      'effective role-default is resolved by highest-privilege-wins priority — ' +
+      'super_admin > org_admin > hr_manager > finance_manager > dept_manager > it_admin > ' +
+      'field_supervisor > employee — falling back to "employee" if none of the held roles ' +
+      'match a known dashboard roleName.',
   })
   @ApiSuccessResponse(Object, 'Dashboard configuration for the current user')
   findForUser(@Request() req) {

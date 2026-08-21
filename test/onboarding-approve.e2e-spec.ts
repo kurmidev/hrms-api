@@ -75,6 +75,7 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
     otherDepartmentDesignationId: string;
     payrollStructureId: string;
     leavePolicyId: string;
+    secondLeavePolicyId: string;
     inactiveLeavePolicyId: string;
     roleId: string;
   }
@@ -141,6 +142,16 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       },
     });
 
+    const secondLeavePolicy = await prisma.leavePolicy.create({
+      data: {
+        organizationId: org.id,
+        name: `Second Leave Policy ${label}`,
+        leaveType: 'CASUAL',
+        daysPerYear: 8,
+        isActive: true,
+      },
+    });
+
     const inactiveLeavePolicy = await prisma.leavePolicy.create({
       data: {
         organizationId: org.id,
@@ -188,6 +199,7 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       otherDepartmentDesignationId: otherDepartmentDesignation.id,
       payrollStructureId: payrollStructure.id,
       leavePolicyId: leavePolicy.id,
+      secondLeavePolicyId: secondLeavePolicy.id,
       inactiveLeavePolicyId: inactiveLeavePolicy.id,
       roleId: assignableRole.id,
     };
@@ -244,7 +256,7 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
     designationId: org.designationId,
     roleIds: [org.roleId],
     payrollStructureId: org.payrollStructureId,
-    leavePolicyId: org.leavePolicyId,
+    leavePolicyIds: [org.leavePolicyId],
     employmentType: 'FULL_TIME',
     // Deliberately in the past relative to "today" so the service's
     // joiningDate <= now ? ACTIVE : PRE_BOARDING branch resolves to ACTIVE —
@@ -308,6 +320,50 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       expect(linkRes.body.data.employeeId).toBe(res.body.data.employeeId);
     });
 
+    it('initializes a LeaveBalance row for EVERY selected leave policy, and sets the primary Employee.leavePolicyId to the first id', async () => {
+      const org = await createOrgFixture('multi-leave');
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/onboarding-links')
+        .set(authed(org))
+        .send(inviteBody())
+        .expect(201);
+      const linkId = created.body.data.id;
+      await forceUnderReview(linkId);
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/onboarding-links/${linkId}/approve`)
+        .set(authed(org))
+        .send(
+          approveBody(org, {
+            leavePolicyIds: [org.leavePolicyId, org.secondLeavePolicyId],
+          }),
+        )
+        .expect(200);
+
+      const employeeId = res.body.data.employeeId;
+
+      // Primary policy = first id in the array.
+      const employee = await prisma.employee.findFirst({ where: { id: employeeId } });
+      expect(employee?.leavePolicyId).toBe(org.leavePolicyId);
+
+      // A real LeaveBalance row was created for EVERY selected policy — this
+      // is the actual fix; LeaveBalanceService.initializeForEmployee was
+      // previously never invoked from any code path (see known-issues.md).
+      const currentYear = new Date().getFullYear();
+      const balances = await prisma.leaveBalance.findMany({
+        where: { employeeId, year: currentYear },
+        orderBy: { leavePolicyId: 'asc' },
+      });
+      const balancePolicyIds = balances.map((b) => b.leavePolicyId).sort();
+      expect(balancePolicyIds).toEqual(
+        [org.leavePolicyId, org.secondLeavePolicyId].sort(),
+      );
+      for (const balance of balances) {
+        expect(balance.balanceDays).toBeGreaterThan(0);
+        expect(balance.takenDays).toBe(0);
+      }
+    });
+
     it('rejects approving a link from another organization (org scoping, 404)', async () => {
       const orgA = await createOrgFixture('scope-a');
       const orgB = await createOrgFixture('scope-b');
@@ -339,11 +395,13 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       const res = await request(app.getHttpServer())
         .post(`/api/v1/onboarding-links/${created.body.data.id}/approve`)
         .set(authed(org))
-        .send(approveBody(org, { leavePolicyId: org.inactiveLeavePolicyId }))
+        .send(approveBody(org, { leavePolicyIds: [org.inactiveLeavePolicyId] }))
         .expect(400);
 
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe('Leave policy not found or inactive in this organization');
+      expect(res.body.message).toBe(
+        'One or more leave policies not found or inactive in this organization',
+      );
 
       // Link must remain UNDER_REVIEW — a rejected activation must not have
       // side effects.

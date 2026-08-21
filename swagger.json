@@ -2139,6 +2139,12 @@
         "responses": {
           "200": {
             "description": "Tax rule metadata"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:read"
           }
         },
         "tags": [
@@ -2181,6 +2187,12 @@
         "responses": {
           "200": {
             "description": "Trashed tax rules"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:read"
           }
         },
         "tags": [
@@ -2219,6 +2231,15 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Validation error in the request body"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:create"
           },
           "409": {
             "description": "Active rule of the same type with no end date already exists"
@@ -2291,6 +2312,12 @@
         "responses": {
           "200": {
             "description": "Tax rules list"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:read"
           }
         },
         "tags": [
@@ -2328,6 +2355,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:read"
           },
           "404": {
             "description": "Tax rule not found"
@@ -2377,6 +2410,15 @@
               }
             }
           },
+          "400": {
+            "description": "Validation error in the request body"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:create"
+          },
           "404": {
             "description": "Tax rule not found"
           }
@@ -2407,6 +2449,12 @@
         "responses": {
           "200": {
             "description": "Tax rule soft-deleted"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:create"
           },
           "404": {
             "description": "Tax rule not found"
@@ -2459,6 +2507,15 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:create"
+          },
+          "404": {
+            "description": "Tax rule not found"
           }
         },
         "tags": [
@@ -2489,6 +2546,12 @@
         "responses": {
           "200": {
             "description": "Tax rule restored"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: payroll:create"
           },
           "404": {
             "description": "Deleted tax rule not found"
@@ -7337,7 +7400,16 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Onboarding link created and invite dispatched"
+          },
+          "400": {
+            "description": "Validation error in the request body"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:create"
           }
         },
         "tags": [
@@ -7396,7 +7468,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated onboarding links",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "message": "Success",
+                    "data": {
+                      "data": [],
+                      "meta": {
+                        "total": 0,
+                        "page": 1,
+                        "limit": 20,
+                        "totalPages": 0
+                      }
+                    },
+                    "errorType": null,
+                    "httpCode": 200
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:read"
           }
         },
         "tags": [
@@ -7426,14 +7525,16 @@
         ],
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
+            "description": "Onboarding link detail with transition history"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:read"
+          },
+          "404": {
+            "description": "Onboarding link not found in this organization"
           }
         },
         "tags": [
@@ -7462,7 +7563,19 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Link revoked (marked EXPIRED)"
+          },
+          "400": {
+            "description": "Link is not in a state that allows revocation"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:delete"
+          },
+          "404": {
+            "description": "Onboarding link not found in this organization"
           }
         },
         "tags": [
@@ -7493,7 +7606,19 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Link transitioned to UNDER_REVIEW"
+          },
+          "400": {
+            "description": "Link is not in a state that allows this transition"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:update"
+          },
+          "404": {
+            "description": "Onboarding link not found in this organization"
           }
         },
         "tags": [
@@ -7534,7 +7659,19 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Link transitioned to CHANGES_REQUESTED"
+          },
+          "400": {
+            "description": "Link is not in a state that allows this transition"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:update"
+          },
+          "404": {
+            "description": "Onboarding link not found in this organization"
           }
         },
         "tags": [
@@ -7575,7 +7712,19 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Link transitioned to REJECTED"
+          },
+          "400": {
+            "description": "Link is not in a state that allows this transition"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:update"
+          },
+          "404": {
+            "description": "Onboarding link not found in this organization"
           }
         },
         "tags": [
@@ -7592,7 +7741,7 @@
       "post": {
         "operationId": "OnboardingController_approve",
         "summary": "Approve + Activate — creates Employee + User in one transaction",
-        "description": "Combined approve and activate. HR must supply all 5 system assignments (department, designation, roles, payroll structure, leave policy). Creates the Employee and User records atomically, then sends the welcome email with temp credentials.",
+        "description": "Combined approve and activate. HR must supply all 5 system assignments (department, designation, roles, payroll structure, one or more leave policies via `leavePolicyIds`). The first entry in `leavePolicyIds` becomes the primary `Employee.leavePolicyId`; a LeaveBalance row is initialized for every listed policy. Creates the Employee and User records atomically, then sends the welcome email with temp credentials.",
         "parameters": [
           {
             "name": "id",
@@ -7616,7 +7765,19 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Employee approved and activated; Employee + User records created"
+          },
+          "400": {
+            "description": "Validation error (e.g. empty leavePolicyIds), an id does not reference an active record in this organization, or the link is not in a state that allows approval"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Missing permission: employee:create"
+          },
+          "404": {
+            "description": "Onboarding link not found in this organization"
           }
         },
         "tags": [
@@ -9744,7 +9905,7 @@
       "get": {
         "operationId": "DashboardController_findForUser",
         "summary": "Get the current user's dashboard",
-        "description": "Returns the dashboard configuration (widgets and layout) assigned to the requesting user, falling back to the role-default dashboard for their org if none is personalized.",
+        "description": "Returns the dashboard configuration (widgets and layout) assigned to the requesting user, falling back to the role-default dashboard for their org if none is personalized. The JWT payload carries `roles: string[]` (a user may hold multiple roles); the effective role-default is resolved by highest-privilege-wins priority — super_admin > org_admin > hr_manager > finance_manager > dept_manager > it_admin > field_supervisor > employee — falling back to \"employee\" if none of the held roles match a known dashboard roleName.",
         "parameters": [],
         "responses": {
           "200": {
