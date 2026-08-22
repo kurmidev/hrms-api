@@ -106,6 +106,22 @@ export class ChatController {
     return this.chatService.createRoom(organizationId, currentUser, dto);
   }
 
+  @Get('employees')
+  @ApiOperation({
+    summary: 'List org employees available to start a chat with',
+    description:
+      'Active employees in the caller\'s organization (excluding the caller), for the ' +
+      '"start a new chat" member picker. Not gated by `employee:read` — any authenticated, ' +
+      'active employee may use chat, matching this controller\'s access model.',
+  })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  listEmployees(
+    @OrganizationId() organizationId: string,
+    @CurrentUser() currentUser: RequestingUser,
+  ) {
+    return this.chatService.listEmployeesForPicker(organizationId, currentUser);
+  }
+
   @Get('rooms')
   @ApiOperation({
     summary: 'List chat rooms the current employee is an active member of',

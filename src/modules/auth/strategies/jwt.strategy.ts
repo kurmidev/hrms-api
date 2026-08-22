@@ -66,6 +66,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             lastName: user.employee.lastName,
             department: user.employee.department?.name,
             designation: user.employee.designation?.name,
+            status: user.employee.status,
           }
         : null,
     };

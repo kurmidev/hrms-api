@@ -18,14 +18,44 @@ export class DashboardController {
   constructor(private readonly service: DashboardService) {}
 
   @Get('kpis')
-  @RequirePermissions('report:read')
+  // Intentionally no @RequirePermissions() here (any authenticated user in the
+  // org may call this — auth is still enforced by the global JwtAuthGuard).
+  // This single endpoint backs every role's KPI widgets, including
+  // kpi_my_leave_balance / kpi_my_performance which are scoped to the
+  // caller's own employeeId. Gating it behind 'report:read' 403s for any
+  // role that lacks that permission (e.g. `employee`, `dept_manager`,
+  // `field_supervisor`, `it_admin`) even though their own dashboard widgets
+  // depend on this same call — see docs/known-issues.md 2026-08-22.
   @ApiOperation({
     summary: 'Get aggregated dashboard KPI values',
     description:
       'Returns the KPI widget values (kpi_total_employees, kpi_active_employees, ...) keyed by ' +
-      'the same widgetType strings used by the default dashboard configs.',
+      'the same widgetType strings used by the default dashboard configs. No permission gate: ' +
+      'every role dashboard calls this for its own KPI tiles, including employee-scoped values.',
   })
   @ApiSuccessResponse(DashboardKpisDto, 'Dashboard KPI values')
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden — NOT for a missing permission (this endpoint has no permission requirement). ' +
+      'Only occurs for the account-level password-change or onboarding-activation gates that ' +
+      'apply to every authenticated route.',
+    schema: {
+      example: {
+        success: false,
+        message: 'Password change required',
+        error: {
+          message: 'Password change required',
+          code: 'MUST_CHANGE_PASSWORD',
+          statusCode: 403,
+          path: '/api/v1/dashboards/kpis',
+          method: 'GET',
+        },
+        errorType: 'HTTP_403',
+        httpCode: 403,
+      },
+    },
+  })
   getKpis(@Request() req) {
     const { id, organizationId } = req.user;
     return this.service.getKpis(organizationId, id);

@@ -10,6 +10,17 @@ const MUST_CHANGE_EXEMPT_PATHS = [
   '/auth/refresh',
 ];
 
+// Same exemptions as the password-change gate below, plus none of the
+// employee-scoped "act on the portal" routes — a PRE_BOARDING employee (their
+// onboarding was approved, so a login exists, but HR has not yet activated
+// them) must be able to log out / check their own status, nothing else.
+const PENDING_ACTIVATION_EXEMPT_PATHS = [
+  '/auth/change-password',
+  '/auth/logout',
+  '/auth/me',
+  '/auth/refresh',
+];
+
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -38,6 +49,21 @@ export class PermissionsGuard implements CanActivate {
         throw new ForbiddenException({
           message: 'Password change required',
           code: 'MUST_CHANGE_PASSWORD',
+        });
+      }
+    }
+
+    // Enforce onboarding-activation gate: an employee whose onboarding was
+    // approved (so their User/login exists) but who HR has not yet activated
+    // (Employee.status still PRE_BOARDING) must not be able to take any
+    // action anywhere in the portal until activation.
+    if (user.employee?.status === 'PRE_BOARDING') {
+      const path = (url as string).split('?')[0];
+      const isExempt = PENDING_ACTIVATION_EXEMPT_PATHS.some((exempt) => path.endsWith(exempt));
+      if (!isExempt) {
+        throw new ForbiddenException({
+          message: 'Your account is pending activation. Please contact HR.',
+          code: 'ONBOARDING_NOT_ACTIVE',
         });
       }
     }

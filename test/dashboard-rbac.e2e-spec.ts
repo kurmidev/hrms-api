@@ -171,20 +171,27 @@ describe('Dashboards — GET /dashboards role-aware resolution (e2e)', () => {
 
     // The employee response must NOT collapse to the org_admin config (the
     // exact bug this fix addresses) — no org_admin-only widget types like
-    // chart_department_headcount / table_recent_joiners should appear.
+    // map_live_tracking / table_loan_leave_summary should appear.
+    // NOTE: these widget type strings must stay in sync with DEFAULT_DASHBOARDS
+    // in dashboard.service.ts (see dashboard-widget-refresh.md) — if that
+    // definition changes, update these assertions in the same change.
     const employeeWidgetTypes = new Set(
       employeeConfigs.flatMap((c) => c.widgets.map((w) => w.widgetType)),
     );
-    expect(employeeWidgetTypes.has('chart_department_headcount')).toBe(false);
-    expect(employeeWidgetTypes.has('table_recent_joiners')).toBe(false);
+    expect(employeeWidgetTypes.has('map_live_tracking')).toBe(false);
+    expect(employeeWidgetTypes.has('table_loan_leave_summary')).toBe(false);
     expect(employeeWidgetTypes.has('clock_checkin')).toBe(true);
     expect(employeeWidgetTypes.has('kpi_my_leave_balance')).toBe(true);
+    expect(employeeWidgetTypes.has('list_my_todos')).toBe(true);
+    expect(employeeWidgetTypes.has('widget_green_thanks')).toBe(true);
+    expect(employeeWidgetTypes.has('list_notices')).toBe(true);
 
     const adminWidgetTypes = new Set(
       adminConfigs.flatMap((c) => c.widgets.map((w) => w.widgetType)),
     );
-    expect(adminWidgetTypes.has('chart_department_headcount')).toBe(true);
-    expect(adminWidgetTypes.has('table_recent_joiners')).toBe(true);
+    expect(adminWidgetTypes.has('map_live_tracking')).toBe(true);
+    expect(adminWidgetTypes.has('table_loan_leave_summary')).toBe(true);
+    expect(adminWidgetTypes.has('list_notifications')).toBe(true);
 
     // Genuinely different sets, not the same list reused.
     expect(employeeWidgetTypes).not.toEqual(adminWidgetTypes);

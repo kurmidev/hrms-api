@@ -31,6 +31,22 @@ import { GreenThanksResponseDto } from './dto/green-thanks-response.dto';
 export class GreenThanksController {
   constructor(private readonly greenThanksService: GreenThanksService) {}
 
+  @Get('recipients')
+  @RequirePermissions('green_thanks:create')
+  @ApiOperation({
+    summary: 'List org employees eligible to receive Green Thanks',
+    description:
+      'Active-org employees (excluding the caller) for the "send Green Thanks" recipient ' +
+      'picker. Gated by `green_thanks:create` (not `employee:read`) so every role that can ' +
+      'send Green Thanks can also see who to send it to.',
+  })
+  listRecipients(
+    @OrganizationId() organizationId: string,
+    @CurrentUser() currentUser: RequestingUser,
+  ) {
+    return this.greenThanksService.listRecipients(organizationId, currentUser);
+  }
+
   @Post()
   @RequirePermissions('green_thanks:create')
   @ApiOperation({ summary: 'Send Green Thanks points to another employee' })

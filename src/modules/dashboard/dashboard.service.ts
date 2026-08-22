@@ -31,18 +31,20 @@ export const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
     roleName: 'org_admin',
     widgets: [
       { widgetType: 'kpi_total_employees', title: 'Total Employees', position: 0, colSpan: 1 },
-      { widgetType: 'kpi_active_employees', title: 'Active Employees', position: 1, colSpan: 1 },
-      { widgetType: 'kpi_attendance_rate', title: 'Attendance Rate', position: 2, colSpan: 1 },
-      { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 3, colSpan: 1 },
-      { widgetType: 'chart_employee_status', title: 'Employee Status', position: 4, colSpan: 2 },
+      { widgetType: 'kpi_pending_approvals', title: 'Pending Approvals', position: 1, colSpan: 1 },
+      { widgetType: 'map_live_tracking', title: 'Live Tracking', position: 2, colSpan: 2 },
       {
-        widgetType: 'chart_department_headcount',
-        title: 'Dept Headcount',
-        position: 5,
+        widgetType: 'table_loan_leave_summary',
+        title: 'Loan & Leave Summaries',
+        position: 3,
         colSpan: 2,
       },
-      { widgetType: 'table_recent_joiners', title: 'Recent Joiners', position: 6, colSpan: 2 },
-      { widgetType: 'activity_recent', title: 'Recent Activity', position: 7, colSpan: 2 },
+      {
+        widgetType: 'list_notifications',
+        title: 'Notifications & Reminders',
+        position: 4,
+        colSpan: 2,
+      },
     ],
   },
   {
@@ -121,10 +123,11 @@ export const DEFAULT_DASHBOARDS: DefaultDashboard[] = [
     name: 'Employee Dashboard',
     roleName: 'employee',
     widgets: [
-      { widgetType: 'clock_checkin', title: 'Check In/Out', position: 0, colSpan: 2 },
-      { widgetType: 'kpi_my_leave_balance', title: 'My Leave Balance', position: 1, colSpan: 1 },
-      { widgetType: 'kpi_my_performance', title: 'My Performance', position: 2, colSpan: 1 },
-      { widgetType: 'schedule_upcoming', title: 'Upcoming Schedule', position: 3, colSpan: 2 },
+      { widgetType: 'clock_checkin', title: 'Attendance Status', position: 0, colSpan: 2 },
+      { widgetType: 'kpi_my_leave_balance', title: 'Leave Balance', position: 1, colSpan: 1 },
+      { widgetType: 'list_my_todos', title: 'Todo List', position: 2, colSpan: 2 },
+      { widgetType: 'widget_green_thanks', title: 'Green Thanks', position: 3, colSpan: 1 },
+      { widgetType: 'list_notices', title: 'Notices', position: 4, colSpan: 2 },
     ],
   },
   {
@@ -237,10 +240,34 @@ export class DashboardService {
     for (const def of DEFAULT_DASHBOARDS) {
       const existing = await this.prisma.dashboardConfig.findFirst({
         where: { organizationId, roleName: def.roleName, isDefault: true },
+        include: { widgets: { orderBy: { position: 'asc' } } },
       });
 
       if (existing) {
-        results.push({ roleName: def.roleName, status: 'already_exists' });
+        const matches = this.widgetsMatchDefinition(existing.widgets, def.widgets);
+
+        if (matches && existing.name === def.name) {
+          results.push({ roleName: def.roleName, status: 'unchanged', id: existing.id });
+          continue;
+        }
+
+        await this.prisma.dashboardWidget.deleteMany({ where: { dashboardId: existing.id } });
+        await this.prisma.dashboardConfig.update({
+          where: { id: existing.id },
+          data: {
+            name: def.name,
+            widgets: {
+              create: def.widgets.map((w) => ({
+                widgetType: w.widgetType,
+                title: w.title,
+                position: w.position,
+                colSpan: w.colSpan,
+              })),
+            },
+          },
+        });
+
+        results.push({ roleName: def.roleName, status: 'reconciled', id: existing.id });
         continue;
       }
 
@@ -265,6 +292,30 @@ export class DashboardService {
     }
 
     return results;
+  }
+
+  /**
+   * Compares persisted widgets against a DEFAULT_DASHBOARDS definition on the
+   * tuple (widgetType, title, position, colSpan), in order. Used by
+   * seedDefaults() to idempotently reconcile role-default dashboards whenever
+   * DEFAULT_DASHBOARDS changes in code — running seedDefaults() twice in a
+   * row against an unchanged definition must yield 'unchanged' both times.
+   */
+  private widgetsMatchDefinition(
+    existingWidgets: { widgetType: string; title: string; position: number; colSpan: number }[],
+    defWidgets: DefaultWidget[],
+  ): boolean {
+    if (existingWidgets.length !== defWidgets.length) return false;
+
+    return existingWidgets.every((w, i) => {
+      const def = defWidgets[i];
+      return (
+        w.widgetType === def.widgetType &&
+        w.title === def.title &&
+        w.position === def.position &&
+        w.colSpan === def.colSpan
+      );
+    });
   }
 
   // ─── KPIs (M17) ─────────────────────────────────────────────────────────────

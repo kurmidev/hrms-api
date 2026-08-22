@@ -475,17 +475,58 @@ async function seedEmployeeKpis(prisma: PrismaClient, organizationId: string) {
  * itself is imported from dashboard.service.ts so there is a single source
  * of truth for DEFAULT_DASHBOARDS.
  */
+function dashboardWidgetsMatchDefinition(
+  existingWidgets: { widgetType: string; title: string; position: number; colSpan: number }[],
+  defWidgets: { widgetType: string; title: string; position: number; colSpan: number }[],
+): boolean {
+  if (existingWidgets.length !== defWidgets.length) return false;
+
+  return existingWidgets.every((w, i) => {
+    const def = defWidgets[i];
+    return (
+      w.widgetType === def.widgetType &&
+      w.title === def.title &&
+      w.position === def.position &&
+      w.colSpan === def.colSpan
+    );
+  });
+}
+
 async function seedDashboardDefaults(prisma: PrismaClient, organizationId: string) {
   let created = 0;
-  let skipped = 0;
+  let reconciled = 0;
+  let unchanged = 0;
 
   for (const def of DEFAULT_DASHBOARDS) {
     const existing = await prisma.dashboardConfig.findFirst({
       where: { organizationId, roleName: def.roleName, isDefault: true },
+      include: { widgets: { orderBy: { position: 'asc' } } },
     });
 
     if (existing) {
-      skipped += 1;
+      const matches = dashboardWidgetsMatchDefinition(existing.widgets, def.widgets);
+
+      if (matches && existing.name === def.name) {
+        unchanged += 1;
+        continue;
+      }
+
+      await prisma.dashboardWidget.deleteMany({ where: { dashboardId: existing.id } });
+      await prisma.dashboardConfig.update({
+        where: { id: existing.id },
+        data: {
+          name: def.name,
+          widgets: {
+            create: def.widgets.map((w) => ({
+              widgetType: w.widgetType,
+              title: w.title,
+              position: w.position,
+              colSpan: w.colSpan,
+            })),
+          },
+        },
+      });
+      reconciled += 1;
       continue;
     }
 
@@ -508,7 +549,9 @@ async function seedDashboardDefaults(prisma: PrismaClient, organizationId: strin
     created += 1;
   }
 
-  console.log(`  Default dashboards seeded: ${created} created, ${skipped} already existed`);
+  console.log(
+    `  Default dashboards seeded: ${created} created, ${reconciled} reconciled, ${unchanged} unchanged`,
+  );
 }
 
 async function seedPlatformAdmin(prisma: PrismaClient) {

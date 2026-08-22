@@ -163,6 +163,7 @@ export class AuthService {
               lastName: user.employee.lastName,
               department: user.employee.department?.name ?? null,
               designation: user.employee.designation?.name ?? null,
+              status: user.employee.status,
               profilePhotoUrl: user.employee.profilePhotoUrl ?? null,
             }
           : null,

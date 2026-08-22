@@ -216,6 +216,29 @@ export class ChatService {
 
   // ─── Reads ──────────────────────────────────────────────────────────────────
 
+  /**
+   * Lightweight org-employee list for the "start a new chat" member picker.
+   * Deliberately NOT gated by `employee:read` (unlike `EmployeesService.findAll`)
+   * — this controller is intentionally open to any authenticated, active
+   * employee (see the module-level comment on `ChatController`), and most
+   * seeded roles (e.g. plain `employee`) do not hold `employee:read`. Excludes
+   * the caller so they can't pick themselves as a DIRECT chat partner.
+   */
+  async listEmployeesForPicker(organizationId: string, currentUser: RequestingUser) {
+    const employeeId = this.requireEmployeeId(currentUser);
+    const employees = await this.prisma.employee.findMany({
+      where: {
+        organizationId,
+        status: EmployeeStatus.ACTIVE,
+        deletedAt: null,
+        id: { not: employeeId },
+      },
+      select: { id: true, empCode: true, firstName: true, lastName: true },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    return employees;
+  }
+
   async listMyRooms(organizationId: string, currentUser: RequestingUser) {
     const employeeId = this.requireEmployeeId(currentUser);
 

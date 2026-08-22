@@ -59,6 +59,29 @@ export class GreenThanksService {
     );
   }
 
+  /**
+   * Lightweight org-employee list for the "send Green Thanks" recipient
+   * picker. Deliberately NOT gated by `employee:read` — every seeded role
+   * that can send Green Thanks (`green_thanks:create`, incl. plain
+   * `employee`) does not necessarily hold `employee:read`, so reusing
+   * `EmployeesService.findAll` here would silently 403 the picker for the
+   * exact users the feature targets. Excludes the caller (can't send to self,
+   * enforced separately in `create()` too).
+   */
+  async listRecipients(organizationId: string, currentUser: RequestingUser) {
+    const fromEmployeeId = currentUser.employeeId;
+    const employees = await this.prisma.employee.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        ...(fromEmployeeId && { id: { not: fromEmployeeId } }),
+      },
+      select: { id: true, empCode: true, firstName: true, lastName: true },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    return employees;
+  }
+
   async create(organizationId: string, currentUser: RequestingUser, dto: CreateGreenThanksDto) {
     const fromEmployeeId = currentUser.employeeId;
     if (!fromEmployeeId) {

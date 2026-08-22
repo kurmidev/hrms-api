@@ -8363,6 +8363,30 @@
         ]
       }
     },
+    "/api/v1/chat/employees": {
+      "get": {
+        "operationId": "ChatController_listEmployees",
+        "summary": "List org employees available to start a chat with",
+        "description": "Active employees in the caller's organization (excluding the caller), for the \"start a new chat\" member picker. Not gated by `employee:read` — any authenticated, active employee may use chat, matching this controller's access model.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "tags": [
+          "Chat"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/chat/rooms/{id}/messages": {
       "get": {
         "operationId": "ChatController_getMessages",
@@ -9967,7 +9991,7 @@
       "get": {
         "operationId": "DashboardController_getKpis",
         "summary": "Get aggregated dashboard KPI values",
-        "description": "Returns the KPI widget values (kpi_total_employees, kpi_active_employees, ...) keyed by the same widgetType strings used by the default dashboard configs.",
+        "description": "Returns the KPI widget values (kpi_total_employees, kpi_active_employees, ...) keyed by the same widgetType strings used by the default dashboard configs. No permission gate: every role dashboard calls this for its own KPI tiles, including employee-scoped values.",
         "parameters": [],
         "responses": {
           "200": {
@@ -10036,17 +10060,18 @@
             }
           },
           "403": {
-            "description": "Forbidden — Insufficient permissions",
+            "description": "Forbidden — NOT for a missing permission (this endpoint has no permission requirement). Only occurs for the account-level password-change or onboarding-activation gates that apply to every authenticated route.",
             "content": {
               "application/json": {
                 "schema": {
                   "example": {
                     "success": false,
-                    "message": "Missing required permissions: payroll:run",
+                    "message": "Password change required",
                     "error": {
-                      "message": "Missing required permissions: payroll:run",
+                      "message": "Password change required",
+                      "code": "MUST_CHANGE_PASSWORD",
                       "statusCode": 403,
-                      "path": "/api/v1/example",
+                      "path": "/api/v1/dashboards/kpis",
                       "method": "GET"
                     },
                     "errorType": "HTTP_403",
@@ -17347,6 +17372,155 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Green Thanks"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/green-thanks/recipients": {
+      "get": {
+        "operationId": "GreenThanksController_listRecipients",
+        "summary": "List org employees eligible to receive Green Thanks",
+        "description": "Active-org employees (excluding the caller) for the \"send Green Thanks\" recipient picker. Gated by `green_thanks:create` (not `employee:read`) so every role that can send Green Thanks can also see who to send it to.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
           },
           "400": {
             "description": "Bad Request — Validation failed or missing required fields",

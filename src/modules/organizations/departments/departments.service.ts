@@ -237,7 +237,7 @@ export class DepartmentsService {
       include: {
         _count: {
           select: {
-            employees: true,
+            employees: { where: { deletedAt: null } },
             children: { where: { deletedAt: null } },
             designations: { where: { deletedAt: null } },
           },
