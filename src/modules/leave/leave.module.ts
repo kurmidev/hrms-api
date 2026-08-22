@@ -5,11 +5,24 @@ import { LeavePoliciesService } from './leave-policies.service';
 import { LeaveBalanceService } from './leave-balance.service';
 import { LeaveApplicationsService } from './leave-applications.service';
 import { HolidaysService } from './holidays.service';
+import { GlobalLeaveService } from './global-leave.service';
 
 @Module({
   imports: [PrismaModule],
   controllers: [LeaveController],
-  providers: [LeavePoliciesService, LeaveBalanceService, LeaveApplicationsService, HolidaysService],
-  exports: [LeavePoliciesService, LeaveBalanceService, LeaveApplicationsService, HolidaysService],
+  providers: [
+    LeavePoliciesService,
+    LeaveBalanceService,
+    LeaveApplicationsService,
+    HolidaysService,
+    GlobalLeaveService,
+  ],
+  exports: [
+    LeavePoliciesService,
+    LeaveBalanceService,
+    LeaveApplicationsService,
+    HolidaysService,
+    GlobalLeaveService,
+  ],
 })
 export class LeaveModule {}

@@ -21,6 +21,7 @@ import { paginate } from '../../common/dto/pagination.dto';
 import { resolveEmpCode } from './helpers/emp-code.helper';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { UpdateEmployeeSelfDto } from './dto/update-employee-self.dto';
 import { PatchEmployeeStatusDto } from './dto/patch-employee-status.dto';
 import { EmployeeQueryDto } from './dto/employee-query.dto';
 import { UpdateBankDetailsDto } from './dto/update-bank-details.dto';
@@ -352,6 +353,15 @@ export class EmployeesService {
         );
     }
 
+    if (dto.zoneId) {
+      const zone = await this.prisma.zone.findFirst({
+        where: { id: dto.zoneId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!zone)
+        throw new BadRequestException(`Zone ${dto.zoneId} not found in this organization`);
+    }
+
     return this.prisma.employee.update({
       where: { id },
       data: {
@@ -363,6 +373,8 @@ export class EmployeesService {
         ...(dto.designationId !== undefined && { designationId: dto.designationId }),
         ...(dto.payrollStructureId !== undefined && { payrollStructureId: dto.payrollStructureId }),
         ...(dto.leavePolicyId !== undefined && { leavePolicyId: dto.leavePolicyId }),
+        ...(dto.zoneId !== undefined && { zoneId: dto.zoneId }),
+        ...(dto.workLocation !== undefined && { workLocation: dto.workLocation }),
         ...(dto.employmentType !== undefined && { employmentType: dto.employmentType }),
         ...(dto.joiningDate !== undefined && { joiningDate: new Date(dto.joiningDate) }),
         ...(dto.probationEndDate !== undefined && {
@@ -371,12 +383,90 @@ export class EmployeesService {
         ...(dto.reportingManagerId !== undefined && { reportingManagerId: dto.reportingManagerId }),
         ...(dto.dateOfBirth !== undefined && { dateOfBirth: new Date(dto.dateOfBirth) }),
         ...(dto.gender !== undefined && { gender: dto.gender }),
+        ...(dto.nationality !== undefined && { nationality: dto.nationality }),
+        ...(dto.bloodGroup !== undefined && { bloodGroup: dto.bloodGroup }),
+        ...(dto.address !== undefined && {
+          address: dto.address as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.healthInfo !== undefined && {
+          healthInfo: dto.healthInfo as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.previousEmployment !== undefined && {
+          previousEmployment: dto.previousEmployment as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.referenceContacts !== undefined && {
+          referenceContacts: dto.referenceContacts as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.profilePhotoUrl !== undefined && { profilePhotoUrl: dto.profilePhotoUrl }),
         ...(dto.pfNumber !== undefined && { pfNumber: dto.pfNumber }),
         ...(dto.esiNumber !== undefined && { esiNumber: dto.esiNumber }),
         ...(dto.uanNumber !== undefined && { uanNumber: dto.uanNumber }),
         updatedById,
       },
     });
+  }
+
+  // Self-service update: an employee editing their own personal details.
+  // `id` must equal the caller's own employeeId — enforced here, not left to
+  // the frontend. The DTO structurally excludes the 5 admin-only fields.
+  async updateSelf(
+    organizationId: string,
+    id: string,
+    dto: UpdateEmployeeSelfDto,
+    callerEmployeeId: string | null,
+  ) {
+    if (!callerEmployeeId || callerEmployeeId !== id) {
+      throw new ForbiddenException('You can only update your own profile');
+    }
+
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+
+    return this.prisma.employee.update({
+      where: { id },
+      data: {
+        ...(dto.dateOfBirth !== undefined && { dateOfBirth: new Date(dto.dateOfBirth) }),
+        ...(dto.gender !== undefined && { gender: dto.gender }),
+        ...(dto.nationality !== undefined && { nationality: dto.nationality }),
+        ...(dto.bloodGroup !== undefined && { bloodGroup: dto.bloodGroup }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.email !== undefined && { email: dto.email }),
+        ...(dto.address !== undefined && {
+          address: dto.address as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.healthInfo !== undefined && {
+          healthInfo: dto.healthInfo as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.previousEmployment !== undefined && {
+          previousEmployment: dto.previousEmployment as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.referenceContacts !== undefined && {
+          referenceContacts: dto.referenceContacts as unknown as Prisma.InputJsonValue,
+        }),
+        ...(dto.profilePhotoUrl !== undefined && { profilePhotoUrl: dto.profilePhotoUrl }),
+      },
+    });
+  }
+
+  // Self-OR-admin gate for bank details, emergency contact, documents, and
+  // profile photo: the caller may act on their own Employee record with no
+  // special permission, or on any record if they hold `employee:update`.
+  private assertSelfOrAdmin(
+    callerEmployeeId: string | null | undefined,
+    targetEmployeeId: string,
+    callerPermissions: string[] | undefined,
+    adminPermission = 'employee:update',
+  ) {
+    const isSelf = !!callerEmployeeId && callerEmployeeId === targetEmployeeId;
+    const isAdmin = !!callerPermissions?.includes(adminPermission);
+    if (!isSelf && !isAdmin) {
+      throw new ForbiddenException(
+        `You can only manage your own record, or you need the '${adminPermission}' permission`,
+      );
+    }
   }
 
   async patchStatus(
@@ -472,7 +562,11 @@ export class EmployeesService {
     id: string,
     dto: UpdateBankDetailsDto,
     updatedById: string,
+    callerEmployeeId?: string | null,
+    callerPermissions?: string[],
   ) {
+    this.assertSelfOrAdmin(callerEmployeeId, id, callerPermissions);
+
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId, deletedAt: null },
       select: { id: true, empCode: true },
@@ -491,7 +585,11 @@ export class EmployeesService {
     id: string,
     dto: UpdateEmergencyContactDto,
     updatedById: string,
+    callerEmployeeId?: string | null,
+    callerPermissions?: string[],
   ) {
+    this.assertSelfOrAdmin(callerEmployeeId, id, callerPermissions);
+
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId, deletedAt: null },
       select: { id: true, empCode: true },
@@ -511,7 +609,11 @@ export class EmployeesService {
     file: Express.Multer.File,
     dto: UploadDocumentDto,
     updatedById: string,
+    callerEmployeeId?: string | null,
+    callerPermissions?: string[],
   ) {
+    this.assertSelfOrAdmin(callerEmployeeId, id, callerPermissions);
+
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId, deletedAt: null },
       select: { id: true, empCode: true, documents: true },
@@ -546,7 +648,11 @@ export class EmployeesService {
     id: string,
     file: Express.Multer.File,
     updatedById: string,
+    callerEmployeeId?: string | null,
+    callerPermissions?: string[],
   ) {
+    this.assertSelfOrAdmin(callerEmployeeId, id, callerPermissions);
+
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId, deletedAt: null },
       select: { id: true, empCode: true, profilePhotoUrl: true },

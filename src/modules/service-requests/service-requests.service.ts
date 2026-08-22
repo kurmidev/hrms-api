@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
+  LeaveStatus,
   Prisma,
   ServiceRequestCategory,
   ServiceRequestPriority,
@@ -12,6 +14,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '@common/dto/pagination.dto';
+import { LeaveBalanceService } from '../leave/leave-balance.service';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { AssignServiceRequestDto } from './dto/assign-service-request.dto';
 import { ResolveServiceRequestDto } from './dto/resolve-service-request.dto';
@@ -57,7 +60,10 @@ const PRIORITY_RANK: Record<ServiceRequestPriority, number> = {
 
 @Injectable()
 export class ServiceRequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly leaveBalanceService: LeaveBalanceService,
+  ) {}
 
   private canManage(currentUser: RequestingUser): boolean {
     return (
@@ -100,8 +106,12 @@ export class ServiceRequestsService {
 
   async create(organizationId: string, currentUser: RequestingUser, dto: CreateServiceRequestDto) {
     const isAnonymous = dto.isAnonymous ?? false;
+    const isSpecialLeave = dto.category === ServiceRequestCategory.SPECIAL_LEAVE;
 
     if (isAnonymous) {
+      if (isSpecialLeave) {
+        throw new BadRequestException('SPECIAL_LEAVE requests cannot be raised anonymously');
+      }
       const org = await this.prisma.organization.findUnique({
         where: { id: organizationId },
         select: { allowAnonymousServiceRequests: true },
@@ -116,16 +126,64 @@ export class ServiceRequestsService {
     const priority = this.resolvePriority(dto.category, dto.priority);
     const slaDeadline = this.computeSlaDeadline(priority);
 
+    // SPECIAL_LEAVE is filed by a manager ON BEHALF OF an employee — employeeId
+    // must be explicitly provided and may not be the caller's own record. Every
+    // other category ignores the incoming employeeId and stays self-service
+    // (defaulting to the caller's own record) to avoid opening an impersonation
+    // hole on ordinary HR/IT/etc requests.
+    let targetEmployeeId: string | null = isAnonymous ? null : currentUser.employeeId;
+
+    if (isSpecialLeave) {
+      if (!dto.employeeId) {
+        throw new BadRequestException('employeeId is required for SPECIAL_LEAVE requests');
+      }
+      if (currentUser.employeeId && dto.employeeId === currentUser.employeeId) {
+        throw new BadRequestException('You cannot raise a SPECIAL_LEAVE request for yourself');
+      }
+
+      const target = await this.prisma.employee.findFirst({
+        where: { id: dto.employeeId, organizationId, deletedAt: null },
+        select: { id: true, reportingManagerId: true },
+      });
+      if (!target) throw new NotFoundException('Target employee not found');
+
+      const isDirectReport =
+        !!currentUser.employeeId && target.reportingManagerId === currentUser.employeeId;
+      if (!isDirectReport && !this.canManage(currentUser)) {
+        throw new ForbiddenException(
+          'You can only raise a SPECIAL_LEAVE request for your own direct reports',
+        );
+      }
+
+      if (!dto.leavePolicyTypeId || !dto.leaveFromDate || !dto.leaveToDate || dto.leaveDays == null) {
+        throw new BadRequestException(
+          'leavePolicyTypeId, leaveFromDate, leaveToDate, and leaveDays are required for SPECIAL_LEAVE requests',
+        );
+      }
+      const policyType = await this.prisma.leavePolicyType.findFirst({
+        where: { id: dto.leavePolicyTypeId, leavePolicy: { organizationId, deletedAt: null } },
+      });
+      if (!policyType) throw new NotFoundException('Leave policy type not found');
+
+      targetEmployeeId = dto.employeeId;
+    }
+
     const created = await this.prisma.serviceRequest.create({
       data: {
         organizationId,
-        employeeId: isAnonymous ? null : currentUser.employeeId,
+        employeeId: targetEmployeeId,
         category: dto.category,
         title: dto.title,
         description: dto.description,
         priority,
         slaDeadline,
         isAnonymous,
+        ...(isSpecialLeave && {
+          leavePolicyTypeId: dto.leavePolicyTypeId,
+          leaveFromDate: new Date(dto.leaveFromDate!),
+          leaveToDate: new Date(dto.leaveToDate!),
+          leaveDays: dto.leaveDays,
+        }),
       },
       include: SR_WITH_EMPLOYEE,
     });
@@ -214,6 +272,12 @@ export class ServiceRequestsService {
   ) {
     const sr = await this.getOrThrow(organizationId, id);
 
+    if (sr.category === ServiceRequestCategory.SPECIAL_LEAVE) {
+      throw new BadRequestException(
+        'SPECIAL_LEAVE requests cannot be resolved here — use PATCH /service-requests/:id/grant-special-leave',
+      );
+    }
+
     if (currentUser.employeeId && sr.employeeId === currentUser.employeeId) {
       throw new ForbiddenException('You cannot resolve a service request you raised yourself');
     }
@@ -241,6 +305,121 @@ export class ServiceRequestsService {
     }
 
     return this.toResponse(updated);
+  }
+
+  /**
+   * Approving a SPECIAL_LEAVE service request: creates an already-APPROVED,
+   * isSpecial=true LeaveApplication from the request's stored leave fields,
+   * deducting the employee's balance (allowed to go negative — this is a
+   * discretionary grant on top of normal entitlement, not gated by
+   * sufficiency), then marks the ServiceRequest RESOLVED and links it to the
+   * new application. Still respects holiday and overlapping-application
+   * checks, same as LeaveApplicationsService.apply().
+   */
+  async grantSpecialLeave(
+    organizationId: string,
+    id: string,
+    approverId: string,
+    approverEmployeeId: string | null,
+  ) {
+    const sr = await this.getOrThrow(organizationId, id);
+
+    if (sr.category !== ServiceRequestCategory.SPECIAL_LEAVE) {
+      throw new BadRequestException('Only SPECIAL_LEAVE requests can be granted through this endpoint');
+    }
+    if (sr.status === ServiceRequestStatus.RESOLVED || sr.status === ServiceRequestStatus.CLOSED) {
+      throw new BadRequestException(`Cannot grant a service request in ${sr.status} status`);
+    }
+    if (approverEmployeeId && sr.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot grant special leave for yourself');
+    }
+    if (
+      !sr.employeeId ||
+      !sr.leavePolicyTypeId ||
+      !sr.leaveFromDate ||
+      !sr.leaveToDate ||
+      sr.leaveDays == null
+    ) {
+      throw new BadRequestException('This request is missing its special-leave fields');
+    }
+
+    const employeeId = sr.employeeId;
+    const leavePolicyTypeId = sr.leavePolicyTypeId;
+    const fromDate = sr.leaveFromDate;
+    const toDate = sr.leaveToDate;
+    const days = sr.leaveDays;
+    const year = fromDate.getFullYear();
+
+    const holidaysInRange = await this.prisma.holiday.findMany({
+      where: { organizationId, date: { gte: fromDate, lte: toDate } },
+      orderBy: { date: 'asc' },
+    });
+    if (holidaysInRange.length > 0) {
+      const names = holidaysInRange
+        .map((h) => `${h.name} (${h.date.toISOString().slice(0, 10)})`)
+        .join(', ');
+      throw new BadRequestException(
+        `Selected dates include a holiday and cannot be used for leave: ${names}`,
+      );
+    }
+
+    const overlapping = await this.prisma.leaveApplication.findFirst({
+      where: {
+        employeeId,
+        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+        AND: [{ fromDate: { lte: toDate } }, { toDate: { gte: fromDate } }],
+      },
+    });
+    if (overlapping) {
+      throw new ConflictException(
+        'An overlapping leave application already exists for these dates',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await this.leaveBalanceService.initializeForEmployee(employeeId, leavePolicyTypeId, year, tx);
+
+      const application = await tx.leaveApplication.create({
+        data: {
+          employeeId,
+          leavePolicyTypeId,
+          fromDate,
+          toDate,
+          days,
+          reason: `Special leave granted via service request ${sr.id}: ${sr.title}`,
+          status: LeaveStatus.APPROVED,
+          approverId,
+          isSpecial: true,
+          decidedAt: new Date(),
+        },
+      });
+
+      // Discretionary grant: allowed to exceed/deplete normal entitlement,
+      // hence force=true — never blocks on insufficient balance.
+      await this.leaveBalanceService.deductBalance(
+        employeeId,
+        leavePolicyTypeId,
+        year,
+        days,
+        true,
+        tx,
+      );
+
+      const updatedSr = await tx.serviceRequest.update({
+        where: { id },
+        data: {
+          status: ServiceRequestStatus.RESOLVED,
+          resolvedAt: new Date(),
+          leaveApplicationId: application.id,
+        },
+        include: SR_WITH_EMPLOYEE,
+      });
+
+      return {
+        serviceRequest: this.toResponse(updatedSr),
+        leaveApplication: application,
+      };
+    });
   }
 
   async updateStatus(organizationId: string, id: string, dto: UpdateStatusDto) {
@@ -351,6 +530,11 @@ export class ServiceRequestsService {
       isAnonymous: sr.isAnonymous,
       resolvedAt: sr.resolvedAt,
       closedAt: sr.closedAt,
+      leavePolicyTypeId: sr.leavePolicyTypeId,
+      leaveFromDate: sr.leaveFromDate,
+      leaveToDate: sr.leaveToDate,
+      leaveDays: sr.leaveDays,
+      leaveApplicationId: sr.leaveApplicationId,
       createdAt: sr.createdAt,
       updatedAt: sr.updatedAt,
       ...(comments && {

@@ -30,6 +30,7 @@ import { ApiCommonErrorResponses } from '../../common/swagger/api-responses.deco
 import { EmployeesService } from './employees.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { UpdateEmployeeSelfDto } from './dto/update-employee-self.dto';
 import { PatchEmployeeStatusDto } from './dto/patch-employee-status.dto';
 import { EmployeeQueryDto } from './dto/employee-query.dto';
 import { UpdateBankDetailsDto } from './dto/update-bank-details.dto';
@@ -110,6 +111,28 @@ export class EmployeesController {
     return this.employeesService.update(organizationId, id, dto, userId);
   }
 
+  @Patch(':id/self')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('profile:update')
+  @ApiOperation({
+    summary: 'Self-service: update my own personal details',
+    description:
+      'Any authenticated employee may call this for their OWN record only (403 otherwise). ' +
+      'Whitelists personal-information fields only (dateOfBirth, gender, nationality, ' +
+      'bloodGroup, phone, email, address, healthInfo, previousEmployment, referenceContacts, ' +
+      'profilePhotoUrl). Department, designation, leave policy, work location/zone, and ' +
+      'employment type can only be changed via the admin PUT :id endpoint.',
+  })
+  @ApiParam({ name: 'id', description: 'Employee UUID (must be your own)' })
+  updateSelf(
+    @CurrentUser('organizationId') organizationId: string,
+    @CurrentUser('employeeId') callerEmployeeId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateEmployeeSelfDto,
+  ) {
+    return this.employeesService.updateSelf(organizationId, id, dto, callerEmployeeId);
+  }
+
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('employee:update')
@@ -158,12 +181,13 @@ export class EmployeesController {
 
   @Post(':id/documents')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:update')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Upload an identity or HR document to MinIO',
-    description: "Adds the document entry to the employee's documents JSON array.",
+    description:
+      "Adds the document entry to the employee's documents JSON array. " +
+      "Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
   })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   @ApiBody({
@@ -194,21 +218,32 @@ export class EmployeesController {
   uploadDocument(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') callerEmployeeId: string,
+    @CurrentUser('permissions') callerPermissions: string[],
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadDocumentDto,
   ) {
-    return this.employeesService.uploadDocument(organizationId, id, file, dto, userId);
+    return this.employeesService.uploadDocument(
+      organizationId,
+      id,
+      file,
+      dto,
+      userId,
+      callerEmployeeId,
+      callerPermissions,
+    );
   }
 
   @Post(':id/profile-photo')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:update')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Upload employee profile photo to MinIO',
-    description: 'Replaces any existing profile photo. Old file is deleted from storage.',
+    description:
+      'Replaces any existing profile photo. Old file is deleted from storage. ' +
+      "Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
   })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   @ApiBody({
@@ -221,40 +256,73 @@ export class EmployeesController {
   uploadProfilePhoto(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') callerEmployeeId: string,
+    @CurrentUser('permissions') callerPermissions: string[],
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.employeesService.uploadProfilePhoto(organizationId, id, file, userId);
+    return this.employeesService.uploadProfilePhoto(
+      organizationId,
+      id,
+      file,
+      userId,
+      callerEmployeeId,
+      callerPermissions,
+    );
   }
 
   // ─── Bank Details & Emergency Contact ────────────────────────────────────────
 
   @Patch(':id/bank-details')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Update employee bank details' })
+  @ApiOperation({
+    summary: 'Update employee bank details',
+    description:
+      "Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
+  })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   updateBankDetails(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') callerEmployeeId: string,
+    @CurrentUser('permissions') callerPermissions: string[],
     @Param('id') id: string,
     @Body() dto: UpdateBankDetailsDto,
   ) {
-    return this.employeesService.updateBankDetails(organizationId, id, dto, userId);
+    return this.employeesService.updateBankDetails(
+      organizationId,
+      id,
+      dto,
+      userId,
+      callerEmployeeId,
+      callerPermissions,
+    );
   }
 
   @Patch(':id/emergency-contact')
   @HttpCode(HttpStatus.OK)
-  @RequirePermissions('employee:update')
-  @ApiOperation({ summary: 'Update employee emergency contact' })
+  @ApiOperation({
+    summary: 'Update employee emergency contact',
+    description:
+      "Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
+  })
   @ApiParam({ name: 'id', description: 'Employee UUID' })
   updateEmergencyContact(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') callerEmployeeId: string,
+    @CurrentUser('permissions') callerPermissions: string[],
     @Param('id') id: string,
     @Body() dto: UpdateEmergencyContactDto,
   ) {
-    return this.employeesService.updateEmergencyContact(organizationId, id, dto, userId);
+    return this.employeesService.updateEmergencyContact(
+      organizationId,
+      id,
+      dto,
+      userId,
+      callerEmployeeId,
+      callerPermissions,
+    );
   }
 
   // ─── Reporting Hierarchy ──────────────────────────────────────────────────────

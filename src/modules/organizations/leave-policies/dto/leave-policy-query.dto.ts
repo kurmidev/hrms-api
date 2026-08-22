@@ -5,7 +5,10 @@ import { Transform } from 'class-transformer';
 import { PaginationDto } from '../../../../common/dto/pagination.dto';
 
 export class LeavePolicyQueryDto extends PaginationDto {
-  @ApiPropertyOptional({ enum: LeaveType })
+  @ApiPropertyOptional({
+    enum: LeaveType,
+    description: 'Only return policy bundles that contain a type of this kind',
+  })
   @IsEnum(LeaveType)
   @IsOptional()
   leaveType?: LeaveType;

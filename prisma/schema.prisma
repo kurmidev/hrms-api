@@ -259,6 +259,7 @@ enum ServiceRequestCategory {
   COMPLIANCE
   FINANCE
   POLICY_CLARIFICATION
+  SPECIAL_LEAVE
 }
 
 enum ServiceRequestStatus {
@@ -397,6 +398,8 @@ model Organization {
   workLocations     WorkLocation[]
   odRecords         OdRecord[]
   kpis              Kpi[]
+  zones             Zone[]
+  globalLeaves      GlobalLeave[]
 
   @@map("organizations")
 }
@@ -595,6 +598,7 @@ model Employee {
   reportingManagerId          String?
   payrollStructureId          String?
   leavePolicyId               String?
+  zoneId                      String?
   employmentType              EmploymentType @default(FULL_TIME)
   status                      EmployeeStatus @default(PRE_BOARDING)
   joiningDate                 DateTime?
@@ -628,6 +632,7 @@ model Employee {
   subordinates     Employee[]        @relation("ManagerSubordinates")
   payrollStructure PayrollStructure? @relation(fields: [payrollStructureId], references: [id])
   leavePolicy      LeavePolicy?      @relation(fields: [leavePolicyId], references: [id])
+  zone             Zone?             @relation(fields: [zoneId], references: [id])
   user             User?
 
   leaveBalances       LeaveBalance[]
@@ -709,11 +714,34 @@ model OnboardingTransition {
 
 // ─── LEAVE ────────────────────────────────────────────────────────────────────
 
+// A LeavePolicy is a named bundle (e.g. "Standard Policy") assigned to an
+// employee via the existing Employee.leavePolicyId. It groups multiple
+// LeavePolicyType entries (CL, PL, SL, ...), each with its own accrual/
+// entitlement rules — previously a policy was hard-locked to one leaveType.
 model LeavePolicy {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  updatedById    String?
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  employees    Employee[]
+  types        LeavePolicyType[]
+  rules        LeavePolicyRule[]
+
+  @@map("leave_policies")
+}
+
+model LeavePolicyType {
   id                 String    @id @default(uuid())
-  organizationId     String
-  name               String
+  leavePolicyId      String
   leaveType          LeaveType
+  name               String?
   daysPerYear        Float
   carryForwardMax    Float     @default(0)
   accrualType        String    @default("monthly")
@@ -723,58 +751,94 @@ model LeavePolicy {
   maxConsecutiveDays Int?
   allowedInProbation Boolean   @default(false)
   genderRestriction  String?
-  isActive           Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
-  deletedAt          DateTime?
-  createdById        String?
-  updatedById        String?
 
-  organization Organization       @relation(fields: [organizationId], references: [id])
-  employees    Employee[]
-  balances     LeaveBalance[]
-  applications LeaveApplication[]
-  rules        LeavePolicyRule[]
+  leavePolicy     LeavePolicy        @relation(fields: [leavePolicyId], references: [id], onDelete: Cascade)
+  balances        LeaveBalance[]
+  applications    LeaveApplication[]
+  serviceRequests ServiceRequest[]
 
-  @@map("leave_policies")
+  @@unique([leavePolicyId, leaveType])
+  @@map("leave_policy_types")
 }
 
 model LeaveBalance {
   id                 String @id @default(uuid())
   employeeId         String
-  leavePolicyId      String
+  leavePolicyTypeId  String
   year               Int
   entitledDays       Float
   takenDays          Float  @default(0)
   carriedForwardDays Float  @default(0)
   balanceDays        Float
 
-  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  leavePolicy LeavePolicy @relation(fields: [leavePolicyId], references: [id])
+  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leavePolicyType LeavePolicyType @relation(fields: [leavePolicyTypeId], references: [id])
 
-  @@unique([employeeId, leavePolicyId, year])
+  @@unique([employeeId, leavePolicyTypeId, year])
   @@map("leave_balances")
 }
 
 model LeaveApplication {
-  id            String      @id @default(uuid())
-  employeeId    String
-  leavePolicyId String
-  fromDate      DateTime
-  toDate        DateTime
-  days          Float
-  reason        String?
-  status        LeaveStatus @default(PENDING)
-  approverId    String?
-  rejectionNote String?
-  appliedAt     DateTime    @default(now())
-  decidedAt     DateTime?
-  createdById   String?
+  id                String      @id @default(uuid())
+  employeeId        String
+  leavePolicyTypeId String
+  fromDate          DateTime
+  toDate            DateTime
+  days              Float
+  reason            String?
+  status            LeaveStatus @default(PENDING)
+  approverId        String?
+  rejectionNote     String?
+  isSpecial         Boolean     @default(false)
+  appliedAt         DateTime    @default(now())
+  decidedAt         DateTime?
+  createdById       String?
 
-  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  leavePolicy LeavePolicy @relation(fields: [leavePolicyId], references: [id])
+  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leavePolicyType LeavePolicyType @relation(fields: [leavePolicyTypeId], references: [id])
+  serviceRequest  ServiceRequest?
 
   @@map("leave_applications")
+}
+
+model Zone {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  updatedById    String?
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  employees    Employee[]
+  globalLeaves GlobalLeave[] @relation("GlobalLeaveZones")
+
+  @@unique([organizationId, name])
+  @@map("zones")
+}
+
+// Org-wide (or zone-scoped) leave day distinct from the per-employee Holiday
+// calendar — bulk-uploadable, tagged to zero or more Zones. An employee sees
+// a GlobalLeave on their calendar when their Zone matches one of its tagged
+// zones, or unconditionally when `appliesToAll` is set.
+model GlobalLeave {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  date           DateTime
+  appliesToAll   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  createdById    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  zones        Zone[]       @relation("GlobalLeaveZones")
+
+  @@map("global_leaves")
 }
 
 model LeavePolicyRule {
@@ -1347,9 +1411,21 @@ model ServiceRequest {
   createdById    String?
   updatedById    String?
 
-  organization Organization            @relation(fields: [organizationId], references: [id])
-  employee     Employee?               @relation(fields: [employeeId], references: [id])
-  comments     ServiceRequestComment[]
+  // Only populated when category === SPECIAL_LEAVE: a manager files the
+  // request on the employee's behalf; approving it (status -> RESOLVED)
+  // auto-creates an approved LeaveApplication for these dates, bypassing
+  // the normal balance-sufficiency check since it's a discretionary grant.
+  leavePolicyTypeId  String?
+  leaveFromDate      DateTime?
+  leaveToDate        DateTime?
+  leaveDays          Float?
+  leaveApplicationId String?   @unique
+
+  organization     Organization            @relation(fields: [organizationId], references: [id])
+  employee         Employee?               @relation(fields: [employeeId], references: [id])
+  leavePolicyType  LeavePolicyType?        @relation(fields: [leavePolicyTypeId], references: [id])
+  leaveApplication LeaveApplication?       @relation(fields: [leaveApplicationId], references: [id])
+  comments         ServiceRequestComment[]
 
   @@map("service_requests")
 }

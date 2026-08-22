@@ -1,25 +1,22 @@
-import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsArray, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
-import { CreateEmployeeDto } from './create-employee.dto';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsDateString, IsEmail, IsObject, IsOptional, IsString } from 'class-validator';
 
-// Admin-only full update DTO. Extends every CreateEmployeeDto field (all optional)
-// plus the remaining Employee profile fields that PUT :id did not previously
-// expose. This is the unrestricted, admin-gated (`employee:update`) surface —
-// it intentionally includes departmentId, designationId, leavePolicyId,
-// employmentType, workLocation and zoneId (the 5 admin-only fields) since
-// this endpoint is only reachable with the `employee:update` permission.
-// Self-service edits go through UpdateEmployeeSelfDto instead, which
-// structurally omits those fields.
-export class UpdateEmployeeDto extends PartialType(CreateEmployeeDto) {
-  @ApiPropertyOptional({ description: 'Zone assignment (GPS/attendance grouping)' })
+// Self-service personal-details update DTO, used by PATCH /employees/:id/self.
+// Structurally whitelists ONLY personal-information fields — the 5 admin-only
+// fields (departmentId, leavePolicyId, designationId, workLocation/zoneId,
+// employmentType) are absent from this class entirely, so no permission
+// combination can smuggle them through this endpoint. Bank details, emergency
+// contact, and documents have their own dedicated PATCH/POST endpoints.
+export class UpdateEmployeeSelfDto {
+  @ApiPropertyOptional({ example: '1995-04-12' })
   @IsOptional()
-  @IsUUID()
-  zoneId?: string;
+  @IsDateString()
+  dateOfBirth?: string;
 
-  @ApiPropertyOptional({ example: 'Mumbai HO' })
+  @ApiPropertyOptional({ example: 'Male' })
   @IsOptional()
   @IsString()
-  workLocation?: string;
+  gender?: string;
 
   @ApiPropertyOptional({ example: 'Indian' })
   @IsOptional()
@@ -30,6 +27,16 @@ export class UpdateEmployeeDto extends PartialType(CreateEmployeeDto) {
   @IsOptional()
   @IsString()
   bloodGroup?: string;
+
+  @ApiPropertyOptional({ example: '9876543210' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'employee.personal@example.com' })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @ApiPropertyOptional({ type: 'object', additionalProperties: true })
   @IsOptional()

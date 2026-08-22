@@ -11,7 +11,7 @@ export class LeaveEmployeeRowDto {
   name: string;
 
   @ApiProperty()
-  leavePolicyId: string;
+  leavePolicyTypeId: string;
 
   @ApiProperty()
   leaveType: string;

@@ -67,6 +67,7 @@ async function bootstrap() {
       .addTag('Auth', 'Authentication & Authorization')
       .addTag('Organizations', 'Organization Management')
       .addTag('Work Locations', 'Geo-Fenced Work Locations for Offline GPS Check-In/OD Resolution')
+      .addTag('Zones', 'Lightweight Employee Zone Tags for GlobalLeave Scoping')
       .addTag('Roles & Permissions', 'RBAC — Role & Permission Management')
       .addTag('Employees', 'Employee Management')
       .addTag('Onboarding (HR)', 'Employee Onboarding Link Management (HR-facing)')

@@ -355,7 +355,7 @@ async function main(): Promise<void> {
   }
 
   const casualLeavePolicy = await prisma.leavePolicy.findFirst({
-    where: { organizationId: org.id, leaveType: LeaveType.CASUAL },
+    where: { organizationId: org.id, types: { some: { leaveType: LeaveType.CASUAL } } },
   });
   if (!casualLeavePolicy) {
     throw new Error(

@@ -136,9 +136,8 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       data: {
         organizationId: org.id,
         name: `Leave Policy ${label}`,
-        leaveType: 'EARNED',
-        daysPerYear: 12,
         isActive: true,
+        types: { create: { leaveType: 'EARNED', daysPerYear: 12 } },
       },
     });
 
@@ -146,9 +145,8 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       data: {
         organizationId: org.id,
         name: `Second Leave Policy ${label}`,
-        leaveType: 'CASUAL',
-        daysPerYear: 8,
         isActive: true,
+        types: { create: { leaveType: 'CASUAL', daysPerYear: 8 } },
       },
     });
 
@@ -156,9 +154,8 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       data: {
         organizationId: org.id,
         name: `Inactive Leave Policy ${label}`,
-        leaveType: 'EARNED',
-        daysPerYear: 12,
         isActive: false,
+        types: { create: { leaveType: 'EARNED', daysPerYear: 12 } },
       },
     });
 
@@ -346,18 +343,20 @@ describe('Onboarding approve (HR) — POST /onboarding-links/:id/approve (e2e)',
       const employee = await prisma.employee.findFirst({ where: { id: employeeId } });
       expect(employee?.leavePolicyId).toBe(org.leavePolicyId);
 
-      // A real LeaveBalance row was created for EVERY selected policy — this
-      // is the actual fix; LeaveBalanceService.initializeForEmployee was
-      // previously never invoked from any code path (see known-issues.md).
+      // A real LeaveBalance row was created for EVERY leave type inside EVERY
+      // selected policy bundle — this is the actual fix;
+      // LeaveBalanceService.initializeForEmployee was previously never
+      // invoked from any code path (see known-issues.md).
       const currentYear = new Date().getFullYear();
+      const expectedTypes = await prisma.leavePolicyType.findMany({
+        where: { leavePolicyId: { in: [org.leavePolicyId, org.secondLeavePolicyId] } },
+      });
       const balances = await prisma.leaveBalance.findMany({
         where: { employeeId, year: currentYear },
-        orderBy: { leavePolicyId: 'asc' },
+        orderBy: { leavePolicyTypeId: 'asc' },
       });
-      const balancePolicyIds = balances.map((b) => b.leavePolicyId).sort();
-      expect(balancePolicyIds).toEqual(
-        [org.leavePolicyId, org.secondLeavePolicyId].sort(),
-      );
+      const balanceTypeIds = balances.map((b) => b.leavePolicyTypeId).sort();
+      expect(balanceTypeIds).toEqual(expectedTypes.map((t) => t.id).sort());
       for (const balance of balances) {
         expect(balance.balanceDays).toBeGreaterThan(0);
         expect(balance.takenDays).toBe(0);

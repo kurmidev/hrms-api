@@ -1,5 +1,5 @@
 /**
- * One-off data-fix: set maxConsecutiveDays = 1 for every LeavePolicy where
+ * One-off data-fix: set maxConsecutiveDays = 1 for every LeavePolicyType where
  * leaveType = 'CASUAL' AND maxConsecutiveDays IS NULL.
  *
  * Idempotent — re-running only touches rows that are still NULL, never
@@ -12,11 +12,13 @@ import { LeaveType, PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const result = await prisma.leavePolicy.updateMany({
+  const result = await prisma.leavePolicyType.updateMany({
     where: { leaveType: LeaveType.CASUAL, maxConsecutiveDays: null },
     data: { maxConsecutiveDays: 1 },
   });
-  console.log(`Backfilled maxConsecutiveDays=1 for ${result.count} CASUAL leave policy row(s).`);
+  console.log(
+    `Backfilled maxConsecutiveDays=1 for ${result.count} CASUAL leave policy type row(s).`,
+  );
 }
 
 main()

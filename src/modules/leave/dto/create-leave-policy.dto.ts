@@ -1,81 +1,36 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LeaveType } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
-  IsEnum,
-  IsIn,
-  IsInt,
-  IsNumber,
   IsOptional,
   IsString,
-  Max,
   MaxLength,
-  Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { LeavePolicyTypeItemDto } from './leave-policy-type-item.dto';
 
 export class CreateLeavePolicyDto {
-  @ApiProperty({ example: 'Annual Casual Leave' })
+  @ApiProperty({ example: 'Standard Policy' })
   @IsString()
   @MinLength(2)
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ enum: LeaveType, example: LeaveType.CASUAL })
-  @IsEnum(LeaveType)
-  leaveType: LeaveType;
-
-  @ApiProperty({ example: 12 })
-  @IsNumber()
-  @Min(0)
-  @Max(365)
-  daysPerYear: number;
-
-  @ApiPropertyOptional({ example: 6 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  carryForwardMax?: number;
-
-  @ApiPropertyOptional({ enum: ['monthly', 'quarterly', 'yearly', 'upfront'], example: 'monthly' })
-  @IsOptional()
-  @IsIn(['monthly', 'quarterly', 'yearly', 'upfront'])
-  accrualType?: string;
-
-  @ApiPropertyOptional({ example: false })
-  @IsOptional()
-  @IsBoolean()
-  isEncashable?: boolean;
-
-  @ApiPropertyOptional({ example: true })
-  @IsOptional()
-  @IsBoolean()
-  isLopEligible?: boolean;
-
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  minAdvanceDays?: number;
-
-  @ApiPropertyOptional({ example: 3 })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  maxConsecutiveDays?: number;
-
-  @ApiPropertyOptional({ example: false })
-  @IsOptional()
-  @IsBoolean()
-  allowedInProbation?: boolean;
-
-  @ApiPropertyOptional({ enum: ['MALE', 'FEMALE'], example: null })
-  @IsOptional()
-  @IsIn(['MALE', 'FEMALE'])
-  genderRestriction?: string;
-
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiProperty({
+    type: [LeavePolicyTypeItemDto],
+    description: 'Leave types included in this policy bundle (e.g. CL + PL + SL)',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => LeavePolicyTypeItemDto)
+  types: LeavePolicyTypeItemDto[];
 }

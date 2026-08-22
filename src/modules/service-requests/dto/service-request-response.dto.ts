@@ -83,6 +83,24 @@ export class ServiceRequestResponseDto {
   @ApiPropertyOptional({ nullable: true })
   closedAt: Date | null;
 
+  @ApiPropertyOptional({ nullable: true, description: 'Set only when category=SPECIAL_LEAVE' })
+  leavePolicyTypeId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Set only when category=SPECIAL_LEAVE' })
+  leaveFromDate?: Date | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Set only when category=SPECIAL_LEAVE' })
+  leaveToDate?: Date | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Set only when category=SPECIAL_LEAVE' })
+  leaveDays?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Set once the request is granted via /grant-special-leave',
+  })
+  leaveApplicationId?: string | null;
+
   @ApiProperty()
   createdAt: Date;
 

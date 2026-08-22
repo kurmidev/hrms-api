@@ -317,13 +317,24 @@ export class OnboardingService {
       return { employee: emp, user: usr };
     });
 
-    // Initialize a LeaveBalance row for EVERY selected leave policy — this is
-    // the real fix for the "Insufficient leave balance" bug (see rule §1 /
-    // known-issues.md 2026-08-20): LeaveBalanceService.initializeForEmployee
-    // was previously never called from any code path.
+    // Initialize a LeaveBalance row for EVERY leave type inside EVERY
+    // selected leave policy bundle — this is the real fix for the
+    // "Insufficient leave balance" bug (see rule §1 / known-issues.md
+    // 2026-08-20): LeaveBalanceService.initializeForEmployee was previously
+    // never called from any code path. Balances are keyed off
+    // LeavePolicyType (not LeavePolicy) since a bundle can contain multiple
+    // leave types (CL + PL + SL, ...).
     const currentYear = new Date().getFullYear();
-    for (const leavePolicyId of dto.leavePolicyIds) {
-      await this.leaveBalanceService.initializeForEmployee(employee.id, leavePolicyId, currentYear);
+    const policyTypes = await this.prisma.leavePolicyType.findMany({
+      where: { leavePolicyId: { in: dto.leavePolicyIds } },
+      select: { id: true },
+    });
+    for (const policyType of policyTypes) {
+      await this.leaveBalanceService.initializeForEmployee(
+        employee.id,
+        policyType.id,
+        currentYear,
+      );
     }
 
     // After transaction: enqueue welcome email (non-blocking)

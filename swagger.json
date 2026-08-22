@@ -3328,6 +3328,7 @@
             "name": "leaveType",
             "required": false,
             "in": "query",
+            "description": "Only return policy bundles that contain a type of this kind",
             "schema": {
               "enum": [
                 "CASUAL",
@@ -4825,6 +4826,939 @@
         ]
       }
     },
+    "/api/v1/zones": {
+      "post": {
+        "operationId": "ZonesController_create",
+        "summary": "Create zone",
+        "description": "Creates a lightweight zone tag used to group employees for zone-scoped GlobalLeave entries.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateZoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Zone created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ZoneResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Zones"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ZonesController_findAll",
+        "summary": "List zones (paginated)",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active state",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of zones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "properties": {
+                            "data": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/ZoneResponseDto"
+                              }
+                            },
+                            "meta": {
+                              "properties": {
+                                "total": {
+                                  "type": "number",
+                                  "example": 100
+                                },
+                                "page": {
+                                  "type": "number",
+                                  "example": 1
+                                },
+                                "limit": {
+                                  "type": "number",
+                                  "example": 20
+                                },
+                                "totalPages": {
+                                  "type": "number",
+                                  "example": 5
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Zones"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/zones/{id}": {
+      "get": {
+        "operationId": "ZonesController_findOne",
+        "summary": "Get a zone by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Zone UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zone detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ZoneResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Zones"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "ZonesController_update",
+        "summary": "Update a zone",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Zone UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateZoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Zone updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ZoneResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Zones"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "ZonesController_remove",
+        "summary": "Soft-delete a zone",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Zone UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zone deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ZoneDeleteResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Zones"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/employees/stats": {
       "get": {
         "operationId": "EmployeesController_getStats",
@@ -6069,6 +7003,175 @@
         ]
       }
     },
+    "/api/v1/employees/{id}/self": {
+      "patch": {
+        "operationId": "EmployeesController_updateSelf",
+        "summary": "Self-service: update my own personal details",
+        "description": "Any authenticated employee may call this for their OWN record only (403 otherwise). Whitelists personal-information fields only (dateOfBirth, gender, nationality, bloodGroup, phone, email, address, healthInfo, previousEmployment, referenceContacts, profilePhotoUrl). Department, designation, leave policy, work location/zone, and employment type can only be changed via the admin PUT :id endpoint.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Employee UUID (must be your own)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEmployeeSelfDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Employees"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/employees/{id}/status": {
       "patch": {
         "operationId": "EmployeesController_patchStatus",
@@ -6400,7 +7503,7 @@
       "post": {
         "operationId": "EmployeesController_uploadDocument",
         "summary": "Upload an identity or HR document to MinIO",
-        "description": "Adds the document entry to the employee's documents JSON array.",
+        "description": "Adds the document entry to the employee's documents JSON array. Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
         "parameters": [
           {
             "name": "id",
@@ -6597,7 +7700,7 @@
       "post": {
         "operationId": "EmployeesController_uploadProfilePhoto",
         "summary": "Upload employee profile photo to MinIO",
-        "description": "Replaces any existing profile photo. Old file is deleted from storage.",
+        "description": "Replaces any existing profile photo. Old file is deleted from storage. Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
         "parameters": [
           {
             "name": "id",
@@ -6775,6 +7878,7 @@
       "patch": {
         "operationId": "EmployeesController_updateBankDetails",
         "summary": "Update employee bank details",
+        "description": "Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
         "parameters": [
           {
             "name": "id",
@@ -6943,6 +8047,7 @@
       "patch": {
         "operationId": "EmployeesController_updateEmergencyContact",
         "summary": "Update employee emergency contact",
+        "description": "Callable by the employee for their OWN record, or by anyone holding 'employee:update'.",
         "parameters": [
           {
             "name": "id",
@@ -8762,6 +9867,7 @@
             "name": "leaveType",
             "required": false,
             "in": "query",
+            "description": "Only return policy bundles that contain a type of this kind",
             "schema": {
               "enum": [
                 "CASUAL",
@@ -8814,7 +9920,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -8854,7 +9967,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -8884,7 +10004,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -9420,6 +10547,184 @@
             "required": true,
             "in": "path",
             "description": "Holiday UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/global-leaves/my": {
+      "get": {
+        "operationId": "LeaveController_getMyGlobalLeaves",
+        "summary": "Get global leaves visible on the current employee's calendar",
+        "description": "Returns global leaves where appliesToAll=true, plus any zone-tagged entries matching the employee's assigned Zone, for the given year (defaults to current year).",
+        "parameters": [
+          {
+            "name": "year",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/global-leaves": {
+      "get": {
+        "operationId": "LeaveController_findAllGlobalLeaves",
+        "summary": "List global leaves (paginated), optionally filtered by year",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "description": "Filter by calendar year of the date field",
+            "schema": {
+              "example": 2026,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "LeaveController_createGlobalLeave",
+        "summary": "Create a single global leave",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GlobalLeaveItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/global-leaves/bulk": {
+      "post": {
+        "operationId": "LeaveController_bulkCreateGlobalLeaves",
+        "summary": "Bulk-create global leaves",
+        "description": "Creates multiple global leaves in one transaction. Rows with unknown zone ids are reported per-row in `errors` rather than failing the whole batch.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCreateGlobalLeaveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Leave"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/leave/global-leaves/{id}": {
+      "delete": {
+        "operationId": "LeaveController_deleteGlobalLeave",
+        "summary": "Delete a global leave",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "GlobalLeave UUID",
             "schema": {
               "type": "string"
             }
@@ -21889,7 +23194,8 @@
                 "ADMIN",
                 "COMPLIANCE",
                 "FINANCE",
-                "POLICY_CLARIFICATION"
+                "POLICY_CLARIFICATION",
+                "SPECIAL_LEAVE"
               ],
               "type": "string"
             }
@@ -22840,6 +24146,165 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request — Validation failed or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Validation failed: email must be a valid email address",
+                    "error": {
+                      "message": [
+                        "email must be a valid email address"
+                      ],
+                      "statusCode": 400,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_400",
+                    "httpCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Invalid or expired token",
+                    "error": {
+                      "message": "Invalid or expired token",
+                      "statusCode": 401,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_401",
+                    "httpCode": 401
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Missing required permissions: payroll:run",
+                    "error": {
+                      "message": "Missing required permissions: payroll:run",
+                      "statusCode": 403,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_403",
+                    "httpCode": 403
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found — Resource does not exist for this organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Resource not found",
+                    "error": {
+                      "message": "Resource not found",
+                      "statusCode": 404,
+                      "path": "/api/v1/example/123",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_404",
+                    "httpCode": 404
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — Resource already exists or is in an incompatible state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "A payroll run for 7/2026 already exists for this organization",
+                    "error": {
+                      "message": "A payroll run for 7/2026 already exists for this organization",
+                      "statusCode": 409,
+                      "path": "/api/v1/example",
+                      "method": "POST"
+                    },
+                    "errorType": "HTTP_409",
+                    "httpCode": 409
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": false,
+                    "message": "Internal server error",
+                    "error": {
+                      "message": "Internal server error",
+                      "statusCode": 500,
+                      "path": "/api/v1/example",
+                      "method": "GET"
+                    },
+                    "errorType": "HTTP_500",
+                    "httpCode": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Service Requests"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/service-requests/{id}/grant-special-leave": {
+      "put": {
+        "operationId": "ServiceRequestsController_grantSpecialLeave",
+        "summary": "Approve a SPECIAL_LEAVE service request and grant the leave",
+        "description": "Only valid for category=SPECIAL_LEAVE requests still OPEN/ASSIGNED/IN_PROGRESS. Creates an already-APPROVED, isSpecial=true LeaveApplication from the fields stored on the request (bypassing the normal balance-sufficiency check — this is a discretionary grant), still enforces holiday and overlapping-application checks, and marks the request RESOLVED with leaveApplicationId set. The regular /resolve endpoint refuses SPECIAL_LEAVE requests and points here instead.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Service request UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
           },
           "400": {
             "description": "Bad Request — Validation failed or missing required fields",
@@ -29889,6 +31354,10 @@
       "description": "Geo-Fenced Work Locations for Offline GPS Check-In/OD Resolution"
     },
     {
+      "name": "Zones",
+      "description": "Lightweight Employee Zone Tags for GlobalLeave Scoping"
+    },
+    {
       "name": "Roles & Permissions",
       "description": "RBAC — Role & Permission Management"
     },
@@ -31624,14 +33093,12 @@
           }
         }
       },
-      "CreateLeavePolicyDto": {
+      "LeavePolicyTypeItemDto": {
         "type": "object",
         "properties": {
-          "name": {
+          "id": {
             "type": "string",
-            "minLength": 2,
-            "maxLength": 100,
-            "example": "Annual Casual Leave"
+            "description": "Existing LeavePolicyType UUID (omit when adding a new type)"
           },
           "leaveType": {
             "type": "string",
@@ -31646,15 +33113,22 @@
             ],
             "example": "CASUAL"
           },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "Casual Leave"
+          },
           "daysPerYear": {
             "type": "number",
             "minimum": 0,
             "maximum": 365,
+            "description": "Total leave days entitlement per year",
             "example": 12
           },
           "carryForwardMax": {
             "type": "number",
             "minimum": 0,
+            "description": "Maximum days that can be carried forward to next year. 0 = no carry forward.",
             "example": 6
           },
           "accrualType": {
@@ -31665,28 +33139,34 @@
               "yearly",
               "upfront"
             ],
+            "description": "How leave days are accrued over time",
             "example": "monthly"
           },
           "isEncashable": {
             "type": "boolean",
+            "description": "Whether unused leave days can be encashed",
             "example": false
           },
           "isLopEligible": {
             "type": "boolean",
+            "description": "Whether absence beyond entitlement is marked as Loss of Pay",
             "example": true
           },
           "minAdvanceDays": {
             "type": "number",
             "minimum": 0,
+            "description": "Minimum advance notice required (in days)",
             "example": 1
           },
           "maxConsecutiveDays": {
             "type": "number",
             "minimum": 1,
+            "description": "Maximum consecutive days allowed per application",
             "example": 3
           },
           "allowedInProbation": {
             "type": "boolean",
+            "description": "Whether this leave is available during probation period",
             "example": false
           },
           "genderRestriction": {
@@ -31695,17 +33175,117 @@
               "MALE",
               "FEMALE"
             ],
+            "description": "Restrict leave to a specific gender. null/omitted = all genders.",
             "example": null
+          }
+        },
+        "required": [
+          "leaveType",
+          "daysPerYear"
+        ]
+      },
+      "CreateLeavePolicyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Standard Policy"
           },
           "isActive": {
             "type": "boolean",
             "example": true
+          },
+          "types": {
+            "description": "Leave types included in this policy bundle (e.g. CL + PL + SL)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeavePolicyTypeItemDto"
+            }
           }
         },
         "required": [
           "name",
+          "types"
+        ]
+      },
+      "LeavePolicyTypeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "leavePolicyId": {
+            "type": "string"
+          },
+          "leaveType": {
+            "type": "string",
+            "enum": [
+              "CASUAL",
+              "SICK",
+              "EARNED",
+              "LOSS_OF_PAY",
+              "MATERNITY",
+              "PATERNITY",
+              "COMPENSATORY"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "daysPerYear": {
+            "type": "number"
+          },
+          "carryForwardMax": {
+            "type": "number"
+          },
+          "accrualType": {
+            "type": "string"
+          },
+          "isEncashable": {
+            "type": "boolean"
+          },
+          "isLopEligible": {
+            "type": "boolean"
+          },
+          "minAdvanceDays": {
+            "type": "number"
+          },
+          "maxConsecutiveDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "allowedInProbation": {
+            "type": "boolean"
+          },
+          "genderRestriction": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "leavePolicyId",
           "leaveType",
-          "daysPerYear"
+          "daysPerYear",
+          "carryForwardMax",
+          "accrualType",
+          "isEncashable",
+          "isLopEligible",
+          "minAdvanceDays",
+          "allowedInProbation",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "LeaveRuleSummaryDto": {
@@ -31747,52 +33327,17 @@
           "name": {
             "type": "string"
           },
-          "leaveType": {
-            "type": "string",
-            "enum": [
-              "CASUAL",
-              "SICK",
-              "EARNED",
-              "LOSS_OF_PAY",
-              "MATERNITY",
-              "PATERNITY",
-              "COMPENSATORY"
-            ]
-          },
-          "daysPerYear": {
-            "type": "number"
-          },
-          "carryForwardMax": {
-            "type": "number"
-          },
-          "accrualType": {
-            "type": "string"
-          },
-          "isEncashable": {
-            "type": "boolean"
-          },
-          "isLopEligible": {
-            "type": "boolean"
-          },
-          "minAdvanceDays": {
-            "type": "number"
-          },
-          "maxConsecutiveDays": {
-            "type": "number",
-            "nullable": true
-          },
-          "allowedInProbation": {
-            "type": "boolean"
-          },
-          "genderRestriction": {
-            "type": "string",
-            "nullable": true
-          },
           "isActive": {
             "type": "boolean"
           },
           "employeeCount": {
             "type": "number"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeavePolicyTypeResponseDto"
+            }
           },
           "rules": {
             "type": "array",
@@ -31818,16 +33363,9 @@
           "id",
           "organizationId",
           "name",
-          "leaveType",
-          "daysPerYear",
-          "carryForwardMax",
-          "accrualType",
-          "isEncashable",
-          "isLopEligible",
-          "minAdvanceDays",
-          "allowedInProbation",
           "isActive",
           "employeeCount",
+          "types",
           "createdAt",
           "updatedAt"
         ]
@@ -31839,75 +33377,18 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 100,
-            "example": "Annual Casual Leave"
-          },
-          "leaveType": {
-            "type": "string",
-            "enum": [
-              "CASUAL",
-              "SICK",
-              "EARNED",
-              "LOSS_OF_PAY",
-              "MATERNITY",
-              "PATERNITY",
-              "COMPENSATORY"
-            ],
-            "example": "CASUAL"
-          },
-          "daysPerYear": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 365,
-            "example": 12
-          },
-          "carryForwardMax": {
-            "type": "number",
-            "minimum": 0,
-            "example": 6
-          },
-          "accrualType": {
-            "type": "string",
-            "enum": [
-              "monthly",
-              "quarterly",
-              "yearly",
-              "upfront"
-            ],
-            "example": "monthly"
-          },
-          "isEncashable": {
-            "type": "boolean",
-            "example": false
-          },
-          "isLopEligible": {
-            "type": "boolean",
-            "example": true
-          },
-          "minAdvanceDays": {
-            "type": "number",
-            "minimum": 0,
-            "example": 1
-          },
-          "maxConsecutiveDays": {
-            "type": "number",
-            "minimum": 1,
-            "example": 3
-          },
-          "allowedInProbation": {
-            "type": "boolean",
-            "example": false
-          },
-          "genderRestriction": {
-            "type": "string",
-            "enum": [
-              "MALE",
-              "FEMALE"
-            ],
-            "example": null
+            "example": "Standard Policy"
           },
           "isActive": {
             "type": "boolean",
             "example": true
+          },
+          "types": {
+            "description": "Leave types included in this policy bundle (e.g. CL + PL + SL)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeavePolicyTypeItemDto"
+            }
           }
         }
       },
@@ -32297,6 +33778,92 @@
           "message"
         ]
       },
+      "ZoneResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateZoneDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "North Zone"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateZoneDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "North Zone"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "ZoneDeleteResponseDto": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "message"
+        ]
+      },
       "CreateEmployeeDto": {
         "type": "object",
         "properties": {
@@ -32442,6 +34009,103 @@
           },
           "uanNumber": {
             "type": "string"
+          },
+          "zoneId": {
+            "type": "string",
+            "description": "Zone assignment (GPS/attendance grouping)"
+          },
+          "workLocation": {
+            "type": "string",
+            "example": "Mumbai HO"
+          },
+          "nationality": {
+            "type": "string",
+            "example": "Indian"
+          },
+          "bloodGroup": {
+            "type": "string",
+            "example": "O+"
+          },
+          "address": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "healthInfo": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "previousEmployment": {
+            "additionalProperties": true,
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "referenceContacts": {
+            "additionalProperties": true,
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "profilePhotoUrl": {
+            "type": "string",
+            "example": "https://minio.example.com/photos/abc.jpg"
+          }
+        }
+      },
+      "UpdateEmployeeSelfDto": {
+        "type": "object",
+        "properties": {
+          "dateOfBirth": {
+            "type": "string",
+            "example": "1995-04-12"
+          },
+          "gender": {
+            "type": "string",
+            "example": "Male"
+          },
+          "nationality": {
+            "type": "string",
+            "example": "Indian"
+          },
+          "bloodGroup": {
+            "type": "string",
+            "example": "O+"
+          },
+          "phone": {
+            "type": "string",
+            "example": "9876543210"
+          },
+          "email": {
+            "type": "string",
+            "example": "employee.personal@example.com"
+          },
+          "address": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "healthInfo": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "previousEmployment": {
+            "additionalProperties": true,
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "referenceContacts": {
+            "additionalProperties": true,
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "profilePhotoUrl": {
+            "type": "string",
+            "example": "https://minio.example.com/photos/abc.jpg"
           }
         }
       },
@@ -32936,9 +34600,9 @@
       "ApplyLeaveDto": {
         "type": "object",
         "properties": {
-          "leavePolicyId": {
+          "leavePolicyTypeId": {
             "type": "string",
-            "description": "Leave policy UUID"
+            "description": "LeavePolicyType UUID (the specific leave type within the assigned policy bundle)"
           },
           "fromDate": {
             "type": "string",
@@ -32959,7 +34623,7 @@
           }
         },
         "required": [
-          "leavePolicyId",
+          "leavePolicyTypeId",
           "fromDate",
           "toDate",
           "days"
@@ -33028,6 +34692,51 @@
             "default": "national"
           }
         }
+      },
+      "GlobalLeaveItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "Regional Festival"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-10-20"
+          },
+          "appliesToAll": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, applies to every employee regardless of zone"
+          },
+          "zoneIds": {
+            "description": "Zone UUIDs this leave applies to. Ignored when appliesToAll is true.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "date"
+        ]
+      },
+      "BulkCreateGlobalLeaveDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GlobalLeaveItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
       },
       "PlatformLoginDto": {
         "type": "object",
@@ -35546,7 +37255,8 @@
               "ADMIN",
               "COMPLIANCE",
               "FINANCE",
-              "POLICY_CLARIFICATION"
+              "POLICY_CLARIFICATION",
+              "SPECIAL_LEAVE"
             ]
           },
           "title": {
@@ -35596,6 +37306,33 @@
             "type": "string",
             "nullable": true
           },
+          "leavePolicyTypeId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Set only when category=SPECIAL_LEAVE"
+          },
+          "leaveFromDate": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Set only when category=SPECIAL_LEAVE"
+          },
+          "leaveToDate": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Set only when category=SPECIAL_LEAVE"
+          },
+          "leaveDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Set only when category=SPECIAL_LEAVE"
+          },
+          "leaveApplicationId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Set once the request is granted via /grant-special-leave"
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -35636,7 +37373,8 @@
               "ADMIN",
               "COMPLIANCE",
               "FINANCE",
-              "POLICY_CLARIFICATION"
+              "POLICY_CLARIFICATION",
+              "SPECIAL_LEAVE"
             ]
           },
           "title": {
@@ -35663,7 +37401,31 @@
           "isAnonymous": {
             "type": "boolean",
             "default": false,
-            "description": "Raise anonymously (requester identity hidden from non-managers). Rejected with 400 if the organization has disabled allowAnonymousServiceRequests."
+            "description": "Raise anonymously (requester identity hidden from non-managers). Rejected with 400 if the organization has disabled allowAnonymousServiceRequests. Not permitted for SPECIAL_LEAVE requests (the target employee must always be identified)."
+          },
+          "employeeId": {
+            "type": "string",
+            "description": "The employee this request is about. Defaults to the caller's own employee record. For category=SPECIAL_LEAVE, a manager sets this to one of their direct reports' employee id (or any employee, if the caller holds an admin-level permission) — the caller may not file a SPECIAL_LEAVE request for themselves."
+          },
+          "leavePolicyTypeId": {
+            "type": "string",
+            "description": "Required when category=SPECIAL_LEAVE. The LeavePolicyType to grant against."
+          },
+          "leaveFromDate": {
+            "type": "string",
+            "example": "2026-09-01",
+            "description": "Required when category=SPECIAL_LEAVE."
+          },
+          "leaveToDate": {
+            "type": "string",
+            "example": "2026-09-03",
+            "description": "Required when category=SPECIAL_LEAVE."
+          },
+          "leaveDays": {
+            "type": "number",
+            "minimum": 0.5,
+            "example": 3,
+            "description": "Required when category=SPECIAL_LEAVE."
           }
         },
         "required": [
@@ -37083,7 +38845,7 @@
           "name": {
             "type": "string"
           },
-          "leavePolicyId": {
+          "leavePolicyTypeId": {
             "type": "string"
           },
           "leaveType": {
@@ -37103,7 +38865,7 @@
           "employeeId",
           "empCode",
           "name",
-          "leavePolicyId",
+          "leavePolicyTypeId",
           "leaveType",
           "entitledDays",
           "takenDays",

@@ -20,6 +20,7 @@ import { LeavePoliciesService } from './leave-policies.service';
 import { LeaveBalanceService } from './leave-balance.service';
 import { LeaveApplicationsService } from './leave-applications.service';
 import { HolidaysService } from './holidays.service';
+import { GlobalLeaveService } from './global-leave.service';
 import { CreateLeavePolicyDto } from './dto/create-leave-policy.dto';
 import { UpdateLeavePolicyDto } from './dto/update-leave-policy.dto';
 import { QueryLeavePolicyDto } from './dto/query-leave-policy.dto';
@@ -28,6 +29,9 @@ import { QueryLeaveDto } from './dto/query-leave.dto';
 import { ApproveLeaveDto, RejectLeaveDto } from './dto/decide-leave.dto';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
+import { GlobalLeaveItemDto } from './dto/global-leave-item.dto';
+import { BulkCreateGlobalLeaveDto } from './dto/bulk-create-global-leave.dto';
+import { QueryGlobalLeaveDto } from './dto/query-global-leave.dto';
 
 @ApiTags('Leave')
 @ApiBearerAuth()
@@ -38,6 +42,7 @@ export class LeaveController {
     private readonly leaveBalanceService: LeaveBalanceService,
     private readonly leaveApplicationsService: LeaveApplicationsService,
     private readonly holidaysService: HolidaysService,
+    private readonly globalLeaveService: GlobalLeaveService,
   ) {}
 
   // ─── Leave Policies ───────────────────────────────────────────────────────
@@ -216,5 +221,70 @@ export class LeaveController {
   @ApiParam({ name: 'id', description: 'Holiday UUID' })
   deleteHoliday(@OrganizationId() organizationId: string, @Param('id') id: string) {
     return this.holidaysService.delete(organizationId, id);
+  }
+
+  // ─── Global Leave ─────────────────────────────────────────────────────────
+
+  @Get('global-leaves/my')
+  @RequirePermissions('leave:read')
+  @ApiOperation({
+    summary: "Get global leaves visible on the current employee's calendar",
+    description:
+      'Returns global leaves where appliesToAll=true, plus any zone-tagged entries matching ' +
+      "the employee's assigned Zone, for the given year (defaults to current year).",
+  })
+  getMyGlobalLeaves(
+    @OrganizationId() organizationId: string,
+    @CurrentUser('employeeId') employeeId: string,
+    @Query('year') year?: string,
+  ) {
+    const resolvedYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    return this.globalLeaveService.getForEmployee(organizationId, employeeId, resolvedYear);
+  }
+
+  @Get('global-leaves')
+  @RequirePermissions('leave:read')
+  @ApiOperation({ summary: 'List global leaves (paginated), optionally filtered by year' })
+  findAllGlobalLeaves(
+    @OrganizationId() organizationId: string,
+    @Query() query: QueryGlobalLeaveDto,
+  ) {
+    return this.globalLeaveService.findAll(organizationId, query);
+  }
+
+  @Post('global-leaves')
+  @RequirePermissions('org:update')
+  @ApiOperation({ summary: 'Create a single global leave' })
+  createGlobalLeave(
+    @OrganizationId() organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: GlobalLeaveItemDto,
+  ) {
+    return this.globalLeaveService.create(organizationId, userId, dto);
+  }
+
+  @Post('global-leaves/bulk')
+  @RequirePermissions('org:update')
+  @ApiOperation({
+    summary: 'Bulk-create global leaves',
+    description:
+      'Creates multiple global leaves in one transaction. Rows with unknown zone ids are ' +
+      'reported per-row in `errors` rather than failing the whole batch.',
+  })
+  bulkCreateGlobalLeaves(
+    @OrganizationId() organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: BulkCreateGlobalLeaveDto,
+  ) {
+    return this.globalLeaveService.bulkCreate(organizationId, userId, dto);
+  }
+
+  @Delete('global-leaves/:id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('org:update')
+  @ApiOperation({ summary: 'Delete a global leave' })
+  @ApiParam({ name: 'id', description: 'GlobalLeave UUID' })
+  deleteGlobalLeave(@OrganizationId() organizationId: string, @Param('id') id: string) {
+    return this.globalLeaveService.delete(organizationId, id);
   }
 }

@@ -465,7 +465,7 @@ export class PayrollService {
       where: {
         employeeId,
         status: LeaveStatus.APPROVED,
-        leavePolicy: { isLopEligible: true },
+        leavePolicyType: { isLopEligible: true },
         fromDate: { lte: monthEnd },
         toDate: { gte: monthStart },
       },

@@ -71,7 +71,7 @@ describe('Leave module — maker-checker self-approval guard (e2e)', () => {
 
   interface OrgFixture {
     organizationId: string;
-    leavePolicyId: string;
+    leavePolicyTypeId: string;
     approverToken: string;
     applicantUserId: string;
     applicantEmail: string;
@@ -117,10 +117,13 @@ describe('Leave module — maker-checker self-approval guard (e2e)', () => {
       data: {
         organizationId: org.id,
         name: `Casual Leave ${label}`,
-        leaveType: 'CASUAL',
-        daysPerYear: 12,
+        types: {
+          create: { leaveType: 'CASUAL', daysPerYear: 12 },
+        },
       },
+      include: { types: true },
     });
+    const leavePolicyType = leavePolicy.types[0];
 
     const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
@@ -175,7 +178,7 @@ describe('Leave module — maker-checker self-approval guard (e2e)', () => {
     await prisma.leaveBalance.create({
       data: {
         employeeId: applicant.id,
-        leavePolicyId: leavePolicy.id,
+        leavePolicyTypeId: leavePolicyType.id,
         year: currentYear,
         entitledDays: 12,
         balanceDays: 12,
@@ -184,7 +187,7 @@ describe('Leave module — maker-checker self-approval guard (e2e)', () => {
     await prisma.leaveBalance.create({
       data: {
         employeeId: approverEmployee.id,
-        leavePolicyId: leavePolicy.id,
+        leavePolicyTypeId: leavePolicyType.id,
         year: currentYear,
         entitledDays: 12,
         balanceDays: 12,
@@ -202,7 +205,7 @@ describe('Leave module — maker-checker self-approval guard (e2e)', () => {
 
     return {
       organizationId: org.id,
-      leavePolicyId: leavePolicy.id,
+      leavePolicyTypeId: leavePolicyType.id,
       approverToken: approverLogin.body.data.accessToken,
       applicantUserId: applicantUser.id,
       applicantEmail,
@@ -223,7 +226,7 @@ describe('Leave module — maker-checker self-approval guard (e2e)', () => {
       .post('/api/v1/leave/apply')
       .set(authed(org.applicantToken, org.organizationId))
       .send({
-        leavePolicyId: org.leavePolicyId,
+        leavePolicyTypeId: org.leavePolicyTypeId,
         fromDate: date,
         toDate: date,
         days,

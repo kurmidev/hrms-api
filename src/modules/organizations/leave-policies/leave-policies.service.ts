@@ -4,6 +4,7 @@ import { paginate, PaginationDto } from '../../../common/dto/pagination.dto';
 import { CreateLeavePolicyDto } from './dto/create-leave-policy.dto';
 import { UpdateLeavePolicyDto } from './dto/update-leave-policy.dto';
 import { LeavePolicyQueryDto } from './dto/leave-policy-query.dto';
+import { LeavePolicyTypeItemDto } from './dto/leave-policy-type-item.dto';
 import {
   ALLOWED_CONDITION_FIELDS,
   CONDITION_OPERATORS,
@@ -40,26 +41,22 @@ export const LEAVE_RULE_SCHEMA = {
 export class LeavePoliciesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly policyInclude = {
+    types: true,
+    _count: { select: { employees: true, rules: true } },
+  } as const;
+
   async create(organizationId: string, dto: CreateLeavePolicyDto) {
+    this.assertNoDuplicateTypes(dto.types);
+
     return this.prisma.leavePolicy.create({
       data: {
         organizationId,
         name: dto.name,
-        leaveType: dto.leaveType,
-        daysPerYear: dto.daysPerYear,
-        carryForwardMax: dto.carryForwardMax ?? 0,
-        accrualType: dto.accrualType ?? 'monthly',
-        isEncashable: dto.isEncashable ?? false,
-        isLopEligible: dto.isLopEligible ?? true,
-        minAdvanceDays: dto.minAdvanceDays ?? 0,
-        maxConsecutiveDays: dto.maxConsecutiveDays ?? null,
-        allowedInProbation: dto.allowedInProbation ?? false,
-        genderRestriction: dto.genderRestriction ?? null,
         isActive: dto.isActive ?? true,
+        types: { create: dto.types.map((t) => this.toTypeCreateData(t)) },
       },
-      include: {
-        _count: { select: { employees: true, rules: true } },
-      },
+      include: this.policyInclude,
     });
   }
 
@@ -67,15 +64,15 @@ export class LeavePoliciesService {
     const where = {
       organizationId,
       deletedAt: null,
-      ...(query.leaveType !== undefined && { leaveType: query.leaveType }),
+      ...(query.leaveType !== undefined && { types: { some: { leaveType: query.leaveType } } }),
       ...(query.isActive !== undefined && { isActive: query.isActive }),
     };
 
     const [data, total] = await Promise.all([
       this.prisma.leavePolicy.findMany({
         where,
-        include: { _count: { select: { employees: true, rules: true } } },
-        orderBy: [{ leaveType: 'asc' }, { name: 'asc' }],
+        include: this.policyInclude,
+        orderBy: { name: 'asc' },
         skip: query.skip,
         take: query.limit,
       }),
@@ -93,7 +90,7 @@ export class LeavePoliciesService {
     const policy = await this.prisma.leavePolicy.findFirst({
       where: { id, organizationId, deletedAt: null },
       include: {
-        _count: { select: { employees: true, rules: true } },
+        ...this.policyInclude,
         rules: {
           where: { deletedAt: null },
           orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
@@ -112,27 +109,109 @@ export class LeavePoliciesService {
   async update(organizationId: string, id: string, dto: UpdateLeavePolicyDto) {
     const policy = await this.prisma.leavePolicy.findFirst({
       where: { id, organizationId, deletedAt: null },
+      include: { types: true },
     });
     if (!policy) throw new NotFoundException('Leave policy not found');
 
-    return this.prisma.leavePolicy.update({
+    if (dto.types) {
+      this.assertNoDuplicateTypes(dto.types);
+      await this.reconcileTypes(policy.id, policy.types, dto.types);
+    }
+
+    await this.prisma.leavePolicy.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.leaveType !== undefined && { leaveType: dto.leaveType }),
-        ...(dto.daysPerYear !== undefined && { daysPerYear: dto.daysPerYear }),
-        ...(dto.carryForwardMax !== undefined && { carryForwardMax: dto.carryForwardMax }),
-        ...(dto.accrualType !== undefined && { accrualType: dto.accrualType }),
-        ...(dto.isEncashable !== undefined && { isEncashable: dto.isEncashable }),
-        ...(dto.isLopEligible !== undefined && { isLopEligible: dto.isLopEligible }),
-        ...(dto.minAdvanceDays !== undefined && { minAdvanceDays: dto.minAdvanceDays }),
-        ...(dto.maxConsecutiveDays !== undefined && { maxConsecutiveDays: dto.maxConsecutiveDays }),
-        ...(dto.allowedInProbation !== undefined && { allowedInProbation: dto.allowedInProbation }),
-        ...(dto.genderRestriction !== undefined && { genderRestriction: dto.genderRestriction }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
-      include: { _count: { select: { employees: true, rules: true } } },
     });
+
+    const updated = await this.prisma.leavePolicy.findFirst({
+      where: { id },
+      include: this.policyInclude,
+    });
+    return this.toResponse(updated!);
+  }
+
+  private assertNoDuplicateTypes(types: LeavePolicyTypeItemDto[]) {
+    const seen = new Set<string>();
+    for (const t of types) {
+      if (seen.has(t.leaveType)) {
+        throw new BadRequestException(
+          `Duplicate leave type "${t.leaveType}" in policy — each type may appear once per bundle`,
+        );
+      }
+      seen.add(t.leaveType);
+    }
+  }
+
+  private toTypeCreateData(t: LeavePolicyTypeItemDto) {
+    return {
+      leaveType: t.leaveType,
+      name: t.name ?? null,
+      daysPerYear: t.daysPerYear,
+      carryForwardMax: t.carryForwardMax ?? 0,
+      accrualType: t.accrualType ?? 'monthly',
+      isEncashable: t.isEncashable ?? false,
+      isLopEligible: t.isLopEligible ?? true,
+      minAdvanceDays: t.minAdvanceDays ?? 0,
+      maxConsecutiveDays: t.maxConsecutiveDays ?? null,
+      allowedInProbation: t.allowedInProbation ?? false,
+      genderRestriction: t.genderRestriction ?? null,
+    };
+  }
+
+  /**
+   * Reconciles an existing bundle's LeavePolicyType rows against the
+   * incoming `types` payload from an update request:
+   *  - items matched by `id` (or by `leaveType` when `id` is omitted) are
+   *    updated in place
+   *  - items with no match are created
+   *  - existing types absent from the payload are deleted, UNLESS a
+   *    LeaveBalance or LeaveApplication already references them — in that
+   *    case the specific type's removal is blocked with a clear error,
+   *    consistent with DepartmentsService.remove()'s pre-delete related-
+   *    record check.
+   */
+  private async reconcileTypes(
+    policyId: string,
+    existing: Array<{ id: string; leaveType: string }>,
+    items: LeavePolicyTypeItemDto[],
+  ) {
+    const existingById = new Map(existing.map((t) => [t.id, t]));
+    const existingByType = new Map(existing.map((t) => [t.leaveType, t]));
+    const keepIds = new Set<string>();
+
+    for (const item of items) {
+      const match =
+        (item.id && existingById.get(item.id)) || existingByType.get(item.leaveType) || null;
+      const data = this.toTypeCreateData(item);
+
+      if (match) {
+        await this.prisma.leavePolicyType.update({ where: { id: match.id }, data });
+        keepIds.add(match.id);
+      } else {
+        const created = await this.prisma.leavePolicyType.create({
+          data: { leavePolicyId: policyId, ...data },
+        });
+        keepIds.add(created.id);
+      }
+    }
+
+    const toRemove = existing.filter((t) => !keepIds.has(t.id));
+    for (const type of toRemove) {
+      const [balanceCount, applicationCount] = await Promise.all([
+        this.prisma.leaveBalance.count({ where: { leavePolicyTypeId: type.id } }),
+        this.prisma.leaveApplication.count({ where: { leavePolicyTypeId: type.id } }),
+      ]);
+      if (balanceCount > 0 || applicationCount > 0) {
+        throw new BadRequestException(
+          `Cannot remove leave type "${type.leaveType}" from this policy — ` +
+            `${balanceCount} balance record(s) and ${applicationCount} application(s) reference it`,
+        );
+      }
+      await this.prisma.leavePolicyType.delete({ where: { id: type.id } });
+    }
   }
 
   async remove(organizationId: string, id: string) {
@@ -345,39 +424,37 @@ export class LeavePoliciesService {
     id: string;
     organizationId: string;
     name: string;
-    leaveType: string;
-    daysPerYear: number;
-    carryForwardMax: number;
-    accrualType: string;
-    isEncashable: boolean;
-    isLopEligible: boolean;
-    minAdvanceDays: number;
-    maxConsecutiveDays: number | null;
-    allowedInProbation: boolean;
-    genderRestriction: string | null;
     isActive: boolean;
     deletedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    types: Array<{
+      id: string;
+      leavePolicyId: string;
+      leaveType: string;
+      name: string | null;
+      daysPerYear: number;
+      carryForwardMax: number;
+      accrualType: string;
+      isEncashable: boolean;
+      isLopEligible: boolean;
+      minAdvanceDays: number;
+      maxConsecutiveDays: number | null;
+      allowedInProbation: boolean;
+      genderRestriction: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
     _count: { employees: number; rules: number };
   }) {
     return {
       id: p.id,
       organizationId: p.organizationId,
       name: p.name,
-      leaveType: p.leaveType,
-      daysPerYear: p.daysPerYear,
-      carryForwardMax: p.carryForwardMax,
-      accrualType: p.accrualType,
-      isEncashable: p.isEncashable,
-      isLopEligible: p.isLopEligible,
-      minAdvanceDays: p.minAdvanceDays,
-      maxConsecutiveDays: p.maxConsecutiveDays,
-      allowedInProbation: p.allowedInProbation,
-      genderRestriction: p.genderRestriction,
       isActive: p.isActive,
       employeeCount: p._count.employees,
       ruleCount: p._count.rules,
+      types: p.types,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
       deletedAt: p.deletedAt,

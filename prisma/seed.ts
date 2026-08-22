@@ -352,15 +352,15 @@ async function seedSubscriptionPlans(prisma: PrismaClient) {
 }
 
 async function seedDefaultLeavePolicies(prisma: PrismaClient, organizationId: string) {
-  const existingCasual = await prisma.leavePolicy.findFirst({
-    where: { organizationId, leaveType: LeaveType.CASUAL },
+  const existingCasual = await prisma.leavePolicyType.findFirst({
+    where: { leaveType: LeaveType.CASUAL, leavePolicy: { organizationId } },
   });
 
   if (existingCasual) {
     // Idempotent guard: only backfill maxConsecutiveDays if it was never set,
     // never overwrite an admin's already-configured value.
     if (existingCasual.maxConsecutiveDays === null) {
-      await prisma.leavePolicy.update({
+      await prisma.leavePolicyType.update({
         where: { id: existingCasual.id },
         data: { maxConsecutiveDays: 1 },
       });
@@ -374,12 +374,17 @@ async function seedDefaultLeavePolicies(prisma: PrismaClient, organizationId: st
   await prisma.leavePolicy.create({
     data: {
       organizationId,
-      name: 'Casual Leave',
-      leaveType: LeaveType.CASUAL,
-      daysPerYear: 12,
-      maxConsecutiveDays: 1,
-      isLopEligible: true,
+      name: 'Standard Policy',
       isActive: true,
+      types: {
+        create: {
+          leaveType: LeaveType.CASUAL,
+          name: 'Casual Leave',
+          daysPerYear: 12,
+          maxConsecutiveDays: 1,
+          isLopEligible: true,
+        },
+      },
     },
   });
   console.log('  Casual leave policy created (maxConsecutiveDays=1)');

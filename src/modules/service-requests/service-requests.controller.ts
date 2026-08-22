@@ -133,6 +133,33 @@ export class ServiceRequestsController {
     return this.serviceRequestsService.resolve(organizationId, id, currentUser, dto);
   }
 
+  @Put(':id/grant-special-leave')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('service_request:manage')
+  @ApiOperation({
+    summary: 'Approve a SPECIAL_LEAVE service request and grant the leave',
+    description:
+      'Only valid for category=SPECIAL_LEAVE requests still OPEN/ASSIGNED/IN_PROGRESS. ' +
+      'Creates an already-APPROVED, isSpecial=true LeaveApplication from the fields stored on ' +
+      'the request (bypassing the normal balance-sufficiency check — this is a discretionary ' +
+      'grant), still enforces holiday and overlapping-application checks, and marks the ' +
+      'request RESOLVED with leaveApplicationId set. The regular /resolve endpoint refuses ' +
+      'SPECIAL_LEAVE requests and points here instead.',
+  })
+  @ApiParam({ name: 'id', description: 'Service request UUID' })
+  grantSpecialLeave(
+    @OrganizationId() organizationId: string,
+    @CurrentUser() currentUser: RequestingUser,
+    @Param('id') id: string,
+  ) {
+    return this.serviceRequestsService.grantSpecialLeave(
+      organizationId,
+      id,
+      currentUser.id,
+      currentUser.employeeId,
+    );
+  }
+
   @Put(':id/status')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('service_request:manage')

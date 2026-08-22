@@ -9,11 +9,11 @@ export class LeaveRuleSummaryDto {
   @ApiProperty() isActive: boolean;
 }
 
-export class LeavePolicyResponseDto {
+export class LeavePolicyTypeResponseDto {
   @ApiProperty() id: string;
-  @ApiProperty() organizationId: string;
-  @ApiProperty() name: string;
+  @ApiProperty() leavePolicyId: string;
   @ApiProperty({ enum: LeaveType }) leaveType: LeaveType;
+  @ApiPropertyOptional() name: string | null;
   @ApiProperty() daysPerYear: number;
   @ApiProperty() carryForwardMax: number;
   @ApiProperty() accrualType: string;
@@ -23,8 +23,17 @@ export class LeavePolicyResponseDto {
   @ApiPropertyOptional() maxConsecutiveDays: number | null;
   @ApiProperty() allowedInProbation: boolean;
   @ApiPropertyOptional() genderRestriction: string | null;
+  @ApiProperty() createdAt: Date;
+  @ApiProperty() updatedAt: Date;
+}
+
+export class LeavePolicyResponseDto {
+  @ApiProperty() id: string;
+  @ApiProperty() organizationId: string;
+  @ApiProperty() name: string;
   @ApiProperty() isActive: boolean;
   @ApiProperty() employeeCount: number;
+  @ApiProperty({ type: [LeavePolicyTypeResponseDto] }) types: LeavePolicyTypeResponseDto[];
   @ApiPropertyOptional({ type: [LeaveRuleSummaryDto] }) rules?: LeaveRuleSummaryDto[];
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;

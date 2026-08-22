@@ -581,7 +581,7 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
 
   describe('Casual Leave maxConsecutiveDays enforcement', () => {
     let org: OrgFixture;
-    let casualPolicyId: string;
+    let casualPolicyTypeId: string;
 
     beforeAll(async () => {
       org = await createOrgFixture('casual-limit');
@@ -590,19 +590,24 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
         data: {
           organizationId: org.organizationId,
           name: 'Casual Leave',
-          leaveType: 'CASUAL',
-          daysPerYear: 12,
-          maxConsecutiveDays: 1,
-          isLopEligible: true,
           isActive: true,
+          types: {
+            create: {
+              leaveType: 'CASUAL',
+              daysPerYear: 12,
+              maxConsecutiveDays: 1,
+              isLopEligible: true,
+            },
+          },
         },
+        include: { types: true },
       });
-      casualPolicyId = policy.id;
+      casualPolicyTypeId = policy.types[0].id;
 
       await prisma.leaveBalance.create({
         data: {
           employeeId: org.employeeId,
-          leavePolicyId: casualPolicyId,
+          leavePolicyTypeId: casualPolicyTypeId,
           year: new Date().getFullYear(),
           entitledDays: 12,
           takenDays: 0,
@@ -616,7 +621,7 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
         .post('/api/v1/leave/apply')
         .set(authed(org.employeeToken, org.organizationId))
         .send({
-          leavePolicyId: casualPolicyId,
+          leavePolicyTypeId: casualPolicyTypeId,
           fromDate: '2026-09-01',
           toDate: '2026-09-02',
           days: 2,
@@ -632,7 +637,7 @@ describe('Work Locations + OD + Casual Leave limit (e2e)', () => {
         .post('/api/v1/leave/apply')
         .set(authed(org.employeeToken, org.organizationId))
         .send({
-          leavePolicyId: casualPolicyId,
+          leavePolicyTypeId: casualPolicyTypeId,
           fromDate: '2026-09-10',
           toDate: '2026-09-10',
           days: 1,

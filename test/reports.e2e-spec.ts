@@ -513,15 +513,16 @@ describe('Reports & Dashboard module (e2e)', () => {
         data: {
           organizationId: org.organizationId,
           name: 'Casual Leave',
-          leaveType: 'CASUAL',
-          daysPerYear: 12,
+          types: { create: { leaveType: 'CASUAL', daysPerYear: 12 } },
         },
+        include: { types: true },
       });
+      const policyType = policy.types[0];
 
       await prisma.leaveBalance.create({
         data: {
           employeeId: org.employees[0].id,
-          leavePolicyId: policy.id,
+          leavePolicyTypeId: policyType.id,
           year: 2026,
           entitledDays: 12,
           takenDays: 3,
@@ -533,7 +534,7 @@ describe('Reports & Dashboard module (e2e)', () => {
         data: [
           {
             employeeId: org.employees[0].id,
-            leavePolicyId: policy.id,
+            leavePolicyTypeId: policyType.id,
             fromDate: new Date('2026-07-01'),
             toDate: new Date('2026-07-01'),
             days: 1,
@@ -541,7 +542,7 @@ describe('Reports & Dashboard module (e2e)', () => {
           },
           {
             employeeId: org.employees[1].id,
-            leavePolicyId: policy.id,
+            leavePolicyTypeId: policyType.id,
             fromDate: new Date('2026-07-02'),
             toDate: new Date('2026-07-02'),
             days: 1,
@@ -549,7 +550,7 @@ describe('Reports & Dashboard module (e2e)', () => {
           },
           {
             employeeId: org.employees[1].id,
-            leavePolicyId: policy.id,
+            leavePolicyTypeId: policyType.id,
             fromDate: new Date('2026-07-03'),
             toDate: new Date('2026-07-03'),
             days: 1,
@@ -810,19 +811,19 @@ describe('Reports & Dashboard module (e2e)', () => {
     beforeAll(async () => {
       org = await createOrgFixture('kpis', 2);
 
+      const kpiPolicy = await prisma.leavePolicy.create({
+        data: {
+          organizationId: org.organizationId,
+          name: 'CL',
+          types: { create: { leaveType: 'CASUAL', daysPerYear: 12 } },
+        },
+        include: { types: true },
+      });
+
       await prisma.leaveApplication.create({
         data: {
           employeeId: org.employees[0].id,
-          leavePolicyId: (
-            await prisma.leavePolicy.create({
-              data: {
-                organizationId: org.organizationId,
-                name: 'CL',
-                leaveType: 'CASUAL',
-                daysPerYear: 12,
-              },
-            })
-          ).id,
+          leavePolicyTypeId: kpiPolicy.types[0].id,
           fromDate: new Date(),
           toDate: new Date(),
           days: 1,

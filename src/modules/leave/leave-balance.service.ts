@@ -11,29 +11,58 @@ export class LeaveBalanceService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  // `client` optionally accepts an interactive `Prisma.TransactionClient` (from a
+  // caller's `prisma.$transaction(async (tx) => ...)`) so this write participates
+  // in that transaction instead of committing independently on the default
+  // singleton connection. Defaults to `this.prisma` for every existing caller.
   async initializeForEmployee(
     employeeId: string,
-    leavePolicyId: string,
+    leavePolicyTypeId: string,
     year: number = new Date().getFullYear(),
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    const policy = await this.prisma.leavePolicy.findFirst({
-      where: { id: leavePolicyId, deletedAt: null },
+    const type = await client.leavePolicyType.findFirst({
+      where: { id: leavePolicyTypeId, leavePolicy: { deletedAt: null } },
     });
-    if (!policy) throw new NotFoundException('Leave policy not found');
+    if (!type) throw new NotFoundException('Leave policy type not found');
 
-    return this.prisma.leaveBalance.upsert({
-      where: { employeeId_leavePolicyId_year: { employeeId, leavePolicyId, year } },
+    return client.leaveBalance.upsert({
+      where: { employeeId_leavePolicyTypeId_year: { employeeId, leavePolicyTypeId, year } },
       create: {
         employeeId,
-        leavePolicyId,
+        leavePolicyTypeId,
         year,
-        entitledDays: policy.daysPerYear,
+        entitledDays: type.daysPerYear,
         takenDays: 0,
         carriedForwardDays: 0,
-        balanceDays: policy.daysPerYear,
+        balanceDays: type.daysPerYear,
       },
       update: {},
     });
+  }
+
+  /**
+   * No code path creates a LeaveBalance row when an employee is onboarded or
+   * a leave policy is created — `initializeForEmployee` above was dead code.
+   * Employees never had a balance to display or draw against. Called
+   * lazily from `getMyBalance` (and `apply`) so it also backfills employees
+   * who were already migrated/onboarded before this existed.
+   *
+   * Balances are per LeavePolicyType now (not per LeavePolicy bundle), so
+   * this loops over every active type inside every active bundle in the
+   * organization rather than over LeavePolicy rows directly.
+   */
+  async ensureBalancesForEmployee(
+    organizationId: string,
+    employeeId: string,
+    year: number = new Date().getFullYear(),
+  ) {
+    const types = await this.prisma.leavePolicyType.findMany({
+      where: { leavePolicy: { organizationId, deletedAt: null, isActive: true } },
+    });
+    for (const type of types) {
+      await this.initializeForEmployee(employeeId, type.id, year);
+    }
   }
 
   async getBalances(organizationId: string, query: QueryLeaveBalanceDto) {
@@ -48,7 +77,9 @@ export class LeaveBalanceService {
         where,
         include: {
           employee: { select: { id: true, empCode: true, firstName: true, lastName: true } },
-          leavePolicy: { select: { id: true, name: true, leaveType: true } },
+          leavePolicyType: {
+            select: { id: true, name: true, leaveType: true, leavePolicyId: true },
+          },
         },
         orderBy: { year: 'desc' },
         skip: query.skip,
@@ -80,25 +111,42 @@ export class LeaveBalanceService {
     });
     if (!employee) throw new NotFoundException('Employee not found');
 
+    await this.ensureBalancesForEmployee(organizationId, employeeId, year);
+
     return this.prisma.leaveBalance.findMany({
       where: { employeeId, year },
       include: {
-        leavePolicy: { select: { id: true, name: true, leaveType: true, isEncashable: true } },
+        leavePolicyType: {
+          select: { id: true, name: true, leaveType: true, isEncashable: true },
+        },
       },
-      orderBy: { leavePolicy: { name: 'asc' } },
+      orderBy: { leavePolicyType: { leaveType: 'asc' } },
     });
   }
 
-  async deductBalance(employeeId: string, leavePolicyId: string, year: number, days: number) {
-    const balance = await this.prisma.leaveBalance.findUnique({
-      where: { employeeId_leavePolicyId_year: { employeeId, leavePolicyId, year } },
+  /**
+   * `force` bypasses the sufficiency check and lets balanceDays go negative —
+   * used by discretionary special-leave grants (ServiceRequestsService), which
+   * are approved on top of an employee's normal entitlement and must not be
+   * blocked by it. Defaults to false so every existing caller is unaffected.
+   */
+  async deductBalance(
+    employeeId: string,
+    leavePolicyTypeId: string,
+    year: number,
+    days: number,
+    force = false,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const balance = await client.leaveBalance.findUnique({
+      where: { employeeId_leavePolicyTypeId_year: { employeeId, leavePolicyTypeId, year } },
     });
     if (!balance) throw new NotFoundException('Leave balance not found for this policy/year');
-    if (balance.balanceDays < days) {
+    if (!force && balance.balanceDays < days) {
       throw new BadRequestException('Insufficient leave balance');
     }
 
-    return this.prisma.leaveBalance.update({
+    return client.leaveBalance.update({
       where: { id: balance.id },
       data: {
         takenDays: balance.takenDays + days,
@@ -107,9 +155,9 @@ export class LeaveBalanceService {
     });
   }
 
-  async restoreBalance(employeeId: string, leavePolicyId: string, year: number, days: number) {
+  async restoreBalance(employeeId: string, leavePolicyTypeId: string, year: number, days: number) {
     const balance = await this.prisma.leaveBalance.findUnique({
-      where: { employeeId_leavePolicyId_year: { employeeId, leavePolicyId, year } },
+      where: { employeeId_leavePolicyTypeId_year: { employeeId, leavePolicyTypeId, year } },
     });
     if (!balance) return null;
 
@@ -125,32 +173,39 @@ export class LeaveBalanceService {
   /**
    * Monthly accrual job — runs at 00:05 on the 1st of every month.
    * Adds 1/12th of daysPerYear to every active employee's leave balance
-   * for policies with accrualType === 'monthly'.
+   * for policy types with accrualType === 'monthly'.
    */
   @Cron('5 0 1 * *')
   async accrueMonthly() {
     const year = new Date().getFullYear();
-    const policies = await this.prisma.leavePolicy.findMany({
-      where: { deletedAt: null, isActive: true, accrualType: 'monthly' },
+    const types = await this.prisma.leavePolicyType.findMany({
+      where: {
+        accrualType: 'monthly',
+        leavePolicy: { deletedAt: null, isActive: true },
+      },
       include: {
-        employees: { where: { deletedAt: null, status: 'ACTIVE' }, select: { id: true } },
+        leavePolicy: {
+          include: {
+            employees: { where: { deletedAt: null, status: 'ACTIVE' }, select: { id: true } },
+          },
+        },
       },
     });
 
-    for (const policy of policies) {
-      const monthlyAccrual = policy.daysPerYear / 12;
-      for (const employee of policy.employees) {
+    for (const type of types) {
+      const monthlyAccrual = type.daysPerYear / 12;
+      for (const employee of type.leavePolicy.employees) {
         const balance = await this.prisma.leaveBalance.upsert({
           where: {
-            employeeId_leavePolicyId_year: {
+            employeeId_leavePolicyTypeId_year: {
               employeeId: employee.id,
-              leavePolicyId: policy.id,
+              leavePolicyTypeId: type.id,
               year,
             },
           },
           create: {
             employeeId: employee.id,
-            leavePolicyId: policy.id,
+            leavePolicyTypeId: type.id,
             year,
             entitledDays: monthlyAccrual,
             takenDays: 0,
@@ -163,7 +218,7 @@ export class LeaveBalanceService {
           },
         });
         this.logger.debug(
-          `Accrued ${monthlyAccrual} days for employee ${employee.id} policy ${policy.id} (balance ${balance.balanceDays})`,
+          `Accrued ${monthlyAccrual} days for employee ${employee.id} policy type ${type.id} (balance ${balance.balanceDays})`,
         );
       }
     }

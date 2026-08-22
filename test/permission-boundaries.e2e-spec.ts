@@ -406,7 +406,7 @@ describe('Permission boundaries + edge cases (e2e)', () => {
     let orgId: string;
     let shiToken: string;
     let shiRestore: () => Promise<void>;
-    let casualPolicyId: string;
+    let casualPolicyTypeId: string;
     let shiEmployeeId: string;
     let createdBalanceId: string;
 
@@ -414,12 +414,12 @@ describe('Permission boundaries + edge cases (e2e)', () => {
       const org = await prisma.organization.findFirst({ where: { name: { contains: 'iGreen' } } });
       orgId = org!.id;
 
-      const policy = await prisma.leavePolicy.findFirst({
-        where: { organizationId: orgId, leaveType: 'CASUAL', isActive: true },
+      const policyType = await prisma.leavePolicyType.findFirst({
+        where: { leaveType: 'CASUAL', leavePolicy: { organizationId: orgId, isActive: true } },
       });
-      expect(policy).not.toBeNull();
-      expect(policy?.maxConsecutiveDays).toBe(1);
-      casualPolicyId = policy!.id;
+      expect(policyType).not.toBeNull();
+      expect(policyType?.maxConsecutiveDays).toBe(1);
+      casualPolicyTypeId = policyType!.id;
 
       const shiEmployee = await prisma.employee.findFirst({ where: { empCode: 'Shi1878' } });
       shiEmployeeId = shiEmployee!.id;
@@ -432,7 +432,7 @@ describe('Permission boundaries + edge cases (e2e)', () => {
       const balance = await prisma.leaveBalance.create({
         data: {
           employeeId: shiEmployeeId,
-          leavePolicyId: casualPolicyId,
+          leavePolicyTypeId: casualPolicyTypeId,
           year: new Date().getFullYear(),
           entitledDays: 12,
           takenDays: 0,
@@ -448,7 +448,7 @@ describe('Permission boundaries + edge cases (e2e)', () => {
 
     afterAll(async () => {
       await prisma.leaveApplication.deleteMany({
-        where: { employeeId: shiEmployeeId, leavePolicyId: casualPolicyId },
+        where: { employeeId: shiEmployeeId, leavePolicyTypeId: casualPolicyTypeId },
       });
       await prisma.leaveBalance.delete({ where: { id: createdBalanceId } }).catch(() => {});
       await shiRestore();
@@ -459,7 +459,7 @@ describe('Permission boundaries + edge cases (e2e)', () => {
         .post('/api/v1/leave/apply')
         .set(authed(shiToken, orgId))
         .send({
-          leavePolicyId: casualPolicyId,
+          leavePolicyTypeId: casualPolicyTypeId,
           fromDate: '2026-11-02',
           toDate: '2026-11-03',
           days: 2,
@@ -474,7 +474,7 @@ describe('Permission boundaries + edge cases (e2e)', () => {
         .post('/api/v1/leave/apply')
         .set(authed(shiToken, orgId))
         .send({
-          leavePolicyId: casualPolicyId,
+          leavePolicyTypeId: casualPolicyTypeId,
           fromDate: '2026-11-10',
           toDate: '2026-11-10',
           days: 1,

@@ -30,10 +30,13 @@ export class LeaveApplicationsService {
     });
     if (!employee) throw new NotFoundException('Employee not found');
 
-    const policy = await this.prisma.leavePolicy.findFirst({
-      where: { id: dto.leavePolicyId, organizationId, deletedAt: null },
+    const policyType = await this.prisma.leavePolicyType.findFirst({
+      where: {
+        id: dto.leavePolicyTypeId,
+        leavePolicy: { organizationId, deletedAt: null },
+      },
     });
-    if (!policy) throw new NotFoundException('Leave policy not found');
+    if (!policyType) throw new NotFoundException('Leave policy type not found');
 
     const fromDate = new Date(dto.fromDate);
     const toDate = new Date(dto.toDate);
@@ -47,15 +50,38 @@ export class LeaveApplicationsService {
     // employee also happens to have low/zero balance (the common case for a
     // freshly onboarded employee) — surfacing the wrong reason for the
     // rejection. See known-issues.md.
-    if (policy.maxConsecutiveDays && dto.days > policy.maxConsecutiveDays) {
+    if (policyType.maxConsecutiveDays && dto.days > policyType.maxConsecutiveDays) {
       throw new BadRequestException(
-        `This leave policy allows a maximum of ${policy.maxConsecutiveDays} consecutive days`,
+        `This leave policy allows a maximum of ${policyType.maxConsecutiveDays} consecutive days`,
       );
     }
 
+    const holidaysInRange = await this.prisma.holiday.findMany({
+      where: { organizationId, date: { gte: fromDate, lte: toDate } },
+      orderBy: { date: 'asc' },
+    });
+    if (holidaysInRange.length > 0) {
+      const names = holidaysInRange
+        .map((h) => `${h.name} (${h.date.toISOString().slice(0, 10)})`)
+        .join(', ');
+      throw new BadRequestException(
+        `Selected dates include a holiday and cannot be used for leave: ${names}`,
+      );
+    }
+
+    // Employees never get a LeaveBalance row created automatically on
+    // onboarding — ensure one exists for this policy/year before checking
+    // it, otherwise every application would fail with a misleading
+    // "Insufficient leave balance" even for a freshly entitled employee.
+    await this.leaveBalanceService.initializeForEmployee(employeeId, dto.leavePolicyTypeId, year);
+
     const balance = await this.prisma.leaveBalance.findUnique({
       where: {
-        employeeId_leavePolicyId_year: { employeeId, leavePolicyId: dto.leavePolicyId, year },
+        employeeId_leavePolicyTypeId_year: {
+          employeeId,
+          leavePolicyTypeId: dto.leavePolicyTypeId,
+          year,
+        },
       },
     });
     if (!balance || balance.balanceDays < dto.days) {
@@ -78,7 +104,7 @@ export class LeaveApplicationsService {
     return this.prisma.leaveApplication.create({
       data: {
         employeeId,
-        leavePolicyId: dto.leavePolicyId,
+        leavePolicyTypeId: dto.leavePolicyTypeId,
         fromDate,
         toDate,
         days: dto.days,
@@ -119,7 +145,7 @@ export class LeaveApplicationsService {
         where,
         include: {
           employee: { select: { id: true, empCode: true, firstName: true, lastName: true } },
-          leavePolicy: { select: { id: true, name: true, leaveType: true } },
+          leavePolicyType: { select: { id: true, name: true, leaveType: true } },
         },
         orderBy: { appliedAt: 'desc' },
         skip: query.skip,
@@ -153,7 +179,7 @@ export class LeaveApplicationsService {
       this.prisma.leaveApplication.findMany({
         where,
         include: {
-          leavePolicy: { select: { id: true, name: true, leaveType: true } },
+          leavePolicyType: { select: { id: true, name: true, leaveType: true } },
         },
         orderBy: { appliedAt: 'desc' },
         skip: query.skip,
@@ -186,7 +212,7 @@ export class LeaveApplicationsService {
     const year = application.fromDate.getFullYear();
     await this.leaveBalanceService.deductBalance(
       application.employeeId,
-      application.leavePolicyId,
+      application.leavePolicyTypeId,
       year,
       application.days,
     );

@@ -16,6 +16,8 @@ import { LeavePoliciesController } from './leave-policies/leave-policies.control
 import { LeavePoliciesService } from './leave-policies/leave-policies.service';
 import { WorkLocationsController } from './work-locations/work-locations.controller';
 import { WorkLocationsService } from './work-locations/work-locations.service';
+import { ZonesController } from './zones/zones.controller';
+import { ZonesService } from './zones/zones.service';
 
 @Module({
   imports: [MulterModule.register({ storage: memoryStorage() })],
@@ -28,6 +30,7 @@ import { WorkLocationsService } from './work-locations/work-locations.service';
     PayrollStructuresController,
     LeavePoliciesController,
     WorkLocationsController,
+    ZonesController,
   ],
   providers: [
     OrganizationsService,
@@ -37,6 +40,7 @@ import { WorkLocationsService } from './work-locations/work-locations.service';
     PayrollStructuresService,
     LeavePoliciesService,
     WorkLocationsService,
+    ZonesService,
   ],
   exports: [
     DepartmentsService,
@@ -45,6 +49,7 @@ import { WorkLocationsService } from './work-locations/work-locations.service';
     PayrollStructuresService,
     LeavePoliciesService,
     WorkLocationsService,
+    ZonesService,
   ],
 })
 export class OrganizationsModule {}
