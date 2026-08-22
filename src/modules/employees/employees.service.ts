@@ -277,6 +277,7 @@ export class EmployeesService {
         },
         payrollStructure: { select: { id: true, name: true } },
         leavePolicy: { select: { id: true, name: true } },
+        zone: { select: { id: true, name: true } },
         user: {
           select: {
             id: true,
