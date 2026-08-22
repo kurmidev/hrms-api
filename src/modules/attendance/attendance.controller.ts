@@ -130,10 +130,17 @@ export class AttendanceController {
   approveCorrection(
     @OrganizationId() organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') approverEmployeeId: string,
     @Param('id') id: string,
     @Body() dto: ApproveCorrectionDto,
   ) {
-    return this.attendanceService.approveCorrection(organizationId, id, dto, userId);
+    return this.attendanceService.approveCorrection(
+      organizationId,
+      id,
+      dto,
+      userId,
+      approverEmployeeId,
+    );
   }
 
   @Get('my')

@@ -47,9 +47,16 @@ export class IncentiveLedgerController {
   release(
     @OrganizationId() organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') approverEmployeeId: string,
     @Param('id') id: string,
     @Body() dto: ReleaseIncentiveDto,
   ) {
-    return this.incentiveLedgerService.release(organizationId, userId, id, dto);
+    return this.incentiveLedgerService.release(
+      organizationId,
+      userId,
+      approverEmployeeId,
+      id,
+      dto,
+    );
   }
 }

@@ -1,5 +1,7 @@
 import { LeaveType, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as fs from 'fs';
+import * as path from 'path';
 import { DEFAULT_DASHBOARDS } from '../src/modules/dashboard/dashboard.service';
 
 const prisma = new PrismaClient();
@@ -524,6 +526,69 @@ async function seedPlatformAdmin(prisma: PrismaClient) {
   console.log('Platform admin seeded');
 }
 
+/**
+ * Dev dogfooding: seeds the iGreen org's `logoUrl` from the real logo asset
+ * checked into the frontend (`frontend/src/assets/igreen-logo.png`), copied
+ * onto local disk storage at the exact key/URL shape `FilesService.uploadLocal`
+ * produces (`${appUrl}/uploads/organizations/<orgId>/logo.png`). Idempotent —
+ * only copies the file / updates the row when they're not already correct.
+ * This only applies when `STORAGE_DRIVER=local` (the active driver for this
+ * dev environment); for `s3`, seeding a logo would require a real MinIO/S3
+ * upload, which is out of scope for a DB/fixture seed and is skipped.
+ */
+async function seedOrgLogo(prismaClient: PrismaClient, organizationId: string): Promise<void> {
+  const storageDriver = process.env.STORAGE_DRIVER || 's3';
+  if (storageDriver !== 'local') {
+    console.log('  Skipping org logo seed (STORAGE_DRIVER is not "local")');
+    return;
+  }
+
+  const appUrl = process.env.APP_URL || 'http://localhost:3001';
+  const localDir = process.env.STORAGE_LOCAL_DIR || 'uploads';
+  const key = `organizations/${organizationId}/logo.png`;
+  const destination = path.join(process.cwd(), localDir, key);
+  const logoUrl = `${appUrl}/uploads/${key}`;
+
+  const sourcePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    'frontend',
+    'src',
+    'assets',
+    'igreen-logo.png',
+  );
+  if (!fs.existsSync(sourcePath)) {
+    console.log(`  Skipping org logo seed (source asset not found at ${sourcePath})`);
+    return;
+  }
+
+  const destinationExists = fs.existsSync(destination);
+  const sourceBuffer = fs.readFileSync(sourcePath);
+  const destinationMatches = destinationExists && fs.readFileSync(destination).equals(sourceBuffer);
+
+  if (!destinationMatches) {
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, sourceBuffer);
+    console.log(`  Org logo copied to ${destination}`);
+  }
+
+  const org = await prismaClient.organization.findUnique({
+    where: { id: organizationId },
+    select: { logoUrl: true },
+  });
+
+  if (org?.logoUrl !== logoUrl) {
+    await prismaClient.organization.update({
+      where: { id: organizationId },
+      data: { logoUrl },
+    });
+    console.log(`  Org logoUrl set to ${logoUrl}`);
+  } else {
+    console.log('  Org logoUrl already correct');
+  }
+}
+
 async function main() {
   console.log('Seeding database...');
 
@@ -539,6 +604,7 @@ async function main() {
     },
   });
   console.log(`Organization: ${org.name} (${org.id})`);
+  await seedOrgLogo(prisma, org.id);
 
   // Seed system roles
   for (const roleData of SYSTEM_ROLES) {

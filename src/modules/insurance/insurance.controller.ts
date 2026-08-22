@@ -127,9 +127,16 @@ export class InsuranceController {
   approveEnrollment(
     @OrganizationId() organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') approverEmployeeId: string,
     @Param('id') id: string,
     @Body() dto: ApproveEnrollmentDto,
   ) {
-    return this.insuranceService.approveEnrollment(organizationId, userId, id, dto);
+    return this.insuranceService.approveEnrollment(
+      organizationId,
+      userId,
+      approverEmployeeId,
+      id,
+      dto,
+    );
   }
 }

@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { OrganizationsController } from './organizations.controller';
 import { OrganizationsService } from './organizations.service';
 import { DepartmentsController } from './departments/departments.controller';
@@ -16,6 +18,7 @@ import { WorkLocationsController } from './work-locations/work-locations.control
 import { WorkLocationsService } from './work-locations/work-locations.service';
 
 @Module({
+  imports: [MulterModule.register({ storage: memoryStorage() })],
   controllers: [
     OrganizationsController,
     CurrenciesController,

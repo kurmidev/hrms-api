@@ -571,4 +571,103 @@ describe('Incentives & Todos module (e2e)', () => {
       );
     });
   });
+
+  // ─── MAKER-CHECKER: SELF-APPROVAL GUARD (hrms-backend.md §26) ─────────────
+
+  describe('Maker-checker: self-approval guard (todo approve + incentive-ledger release)', () => {
+    let org: OrgFixture;
+    let ruleId: string;
+
+    beforeAll(async () => {
+      org = await createOrgFixture('self-approval');
+      const rule = await createRule(org, 20, 'self-approval');
+      ruleId = rule.id;
+
+      // Grant the field agent's own user todo:approve/incentive:manage too,
+      // then re-login to pick up the newly-flattened permission in the JWT.
+      const approverRole = await prisma.role.findFirstOrThrow({
+        where: {
+          organizationId: org.organizationId,
+          name: 'incentives-e2e-approver-self-approval',
+        },
+      });
+      await prisma.userRole.create({
+        data: { userId: org.employeeUserId, roleId: approverRole.id },
+      });
+      const relogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: `employee-self-approval@incentives-e2e.test`, password: PASSWORD })
+        .expect(200);
+      org = { ...org, employeeToken: relogin.body.data.accessToken };
+    });
+
+    it('the field agent, even holding todo:approve, gets 403 approving their own todo', async () => {
+      const todoId = await createSubmittedTodo(org, ruleId, 5);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/todos/${todoId}/approve`)
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ approve: true, hold: false })
+        .expect(403);
+      expect(res.body.message).toMatch(/own/i);
+    });
+
+    it('a DIFFERENT user holding todo:approve can approve the same field agent todo normally', async () => {
+      const todoId = await createSubmittedTodo(org, ruleId, 5);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/todos/${todoId}/approve`)
+        .set(authed(org.approverToken, org.organizationId))
+        .send({ approve: true, hold: false })
+        .expect(200);
+      expect(res.body.data.status).toBe('APPROVED');
+    });
+
+    it('the field agent, even holding incentive:manage, gets 403 releasing their own held ledger entry', async () => {
+      const todoId = await createSubmittedTodo(org, ruleId, 5);
+      // Held ledger entry must be created by a DIFFERENT approver (self-approve
+      // of the underlying todo is itself blocked, per the case above).
+      await request(app.getHttpServer())
+        .put(`/api/v1/todos/${todoId}/approve`)
+        .set(authed(org.approverToken, org.organizationId))
+        .send({ approve: true, hold: true })
+        .expect(200);
+
+      const ledgerRes = await request(app.getHttpServer())
+        .get('/api/v1/incentive-ledger')
+        .set(authed(org.approverToken, org.organizationId))
+        .expect(200);
+      const ledgerRow = ledgerRes.body.data.data.find((row: any) => row.todo?.id === todoId);
+      expect(ledgerRow.isHeld).toBe(true);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/incentive-ledger/${ledgerRow.id}/release`)
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({})
+        .expect(403);
+      expect(res.body.message).toMatch(/own/i);
+    });
+
+    it('a DIFFERENT user holding incentive:manage can release the same field agent ledger entry normally', async () => {
+      const todoId = await createSubmittedTodo(org, ruleId, 5);
+      await request(app.getHttpServer())
+        .put(`/api/v1/todos/${todoId}/approve`)
+        .set(authed(org.approverToken, org.organizationId))
+        .send({ approve: true, hold: true })
+        .expect(200);
+
+      const ledgerRes = await request(app.getHttpServer())
+        .get('/api/v1/incentive-ledger')
+        .set(authed(org.approverToken, org.organizationId))
+        .expect(200);
+      const ledgerRow = ledgerRes.body.data.data.find((row: any) => row.todo?.id === todoId);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/incentive-ledger/${ledgerRow.id}/release`)
+        .set(authed(org.approverToken, org.organizationId))
+        .send({})
+        .expect(200);
+      expect(res.body.data.isReleased).toBe(true);
+    });
+  });
 });

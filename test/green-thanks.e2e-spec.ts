@@ -529,4 +529,99 @@ describe('Green Thanks module (e2e)', () => {
       expect(orgAList.body.data.data.some((row: any) => row.reason === 'Org A only')).toBe(true);
     });
   });
+
+  // ─── MAKER-CHECKER: SELF-APPROVAL GUARD (hrms-backend.md §26) ─────────────
+
+  describe('Maker-checker: self-approval guard (both sender AND receiver blocked)', () => {
+    let org: OrgFixture;
+
+    beforeAll(async () => {
+      org = await createOrgFixture('self-approval');
+
+      // Grant BOTH the sender's and receiver's own users green_thanks:manage
+      // too, then re-login each to pick up the newly-flattened permission.
+      const approverRole = await prisma.role.findFirstOrThrow({
+        where: { organizationId: org.organizationId, name: 'gt-e2e-approver-self-approval' },
+      });
+      await prisma.userRole.create({
+        data: { userId: org.senderUserId, roleId: approverRole.id },
+      });
+      const senderUser = await prisma.user.findFirstOrThrow({
+        where: { organizationId: org.organizationId, employeeId: org.senderId },
+      });
+      const receiverUser = await prisma.user.findFirstOrThrow({
+        where: { organizationId: org.organizationId, employeeId: org.receiverId },
+      });
+      await prisma.userRole.create({
+        data: { userId: receiverUser.id, roleId: approverRole.id },
+      });
+
+      const senderRelogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: senderUser.email, password: PASSWORD })
+        .expect(200);
+      const receiverRelogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: receiverUser.email, password: PASSWORD })
+        .expect(200);
+
+      org = {
+        ...org,
+        senderToken: senderRelogin.body.data.accessToken,
+        receiverToken: receiverRelogin.body.data.accessToken,
+      };
+    });
+
+    it('the SENDER, even holding green_thanks:manage, gets 403 approving an entry they sent', async () => {
+      const sendRes = await request(app.getHttpServer())
+        .post('/api/v1/green-thanks')
+        .set(authed(org.senderToken, org.organizationId))
+        .send({ toEmployeeId: org.receiverId, points: 3, reason: 'Sender self-approve attempt' })
+        .expect(201);
+      const id = sendRes.body.data.id;
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/green-thanks/${id}/approve`)
+        .set(authed(org.senderToken, org.organizationId))
+        .send({ approve: true })
+        .expect(403);
+      expect(res.body.message).toMatch(/sent|receiv/i);
+    });
+
+    it('the RECEIVER, even holding green_thanks:manage, gets 403 approving an entry sent to them', async () => {
+      const sendRes = await request(app.getHttpServer())
+        .post('/api/v1/green-thanks')
+        .set(authed(org.senderToken, org.organizationId))
+        .send({
+          toEmployeeId: org.receiverId,
+          points: 3,
+          reason: 'Receiver self-approve attempt',
+        })
+        .expect(201);
+      const id = sendRes.body.data.id;
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/green-thanks/${id}/approve`)
+        .set(authed(org.receiverToken, org.organizationId))
+        .send({ approve: true })
+        .expect(403);
+      expect(res.body.message).toMatch(/sent|receiv/i);
+    });
+
+    it('a DIFFERENT user holding green_thanks:manage can approve the same entry normally', async () => {
+      const sendRes = await request(app.getHttpServer())
+        .post('/api/v1/green-thanks')
+        .set(authed(org.senderToken, org.organizationId))
+        .send({ toEmployeeId: org.receiverId, points: 3, reason: 'Approved by a third party' })
+        .expect(201);
+      const id = sendRes.body.data.id;
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/green-thanks/${id}/approve`)
+        .set(authed(org.approverToken, org.organizationId))
+        .send({ approve: true })
+        .expect(200);
+      expect(res.body.data.status).toBe('approved');
+    });
+  });
 });

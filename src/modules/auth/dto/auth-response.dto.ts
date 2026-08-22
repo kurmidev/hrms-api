@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class EmployeeSummaryDto {
   @ApiProperty({ example: 'emp_uuid_123' })
@@ -32,6 +32,21 @@ export class AuthUserDto {
 
   @ApiProperty({ example: 'org_uuid_456' })
   organizationId: string;
+
+  @ApiPropertyOptional({
+    example: 'IGreen Technologies',
+    nullable: true,
+    description: 'Current organization name — used for tenant branding in the frontend shell.',
+  })
+  organizationName: string | null;
+
+  @ApiPropertyOptional({
+    example: 'http://localhost:3001/uploads/organizations/org_uuid_456/logo.png',
+    nullable: true,
+    description:
+      'Current organization logo URL — used for tenant branding in the frontend shell/login page.',
+  })
+  organizationLogoUrl: string | null;
 
   @ApiProperty({
     example: false,

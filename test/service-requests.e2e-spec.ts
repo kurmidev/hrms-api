@@ -643,4 +643,72 @@ describe('Service Requests module (e2e)', () => {
         .expect(403);
     });
   });
+
+  // ─── Maker-checker: self-approval guard (hrms-backend.md §26) ────────────
+
+  describe('Maker-checker: self-resolve guard', () => {
+    let org: OrgFixture;
+
+    beforeAll(async () => {
+      org = await createOrgFixture('self-approval');
+
+      // Grant the requester's own user service_request:manage too, then
+      // re-login to pick up the newly-flattened permission in the JWT.
+      const managerRole = await prisma.role.findFirstOrThrow({
+        where: { organizationId: org.organizationId, name: 'sr-e2e-manager-self-approval' },
+      });
+      await prisma.userRole.create({
+        data: { userId: org.employeeUserId, roleId: managerRole.id },
+      });
+      const relogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: `emp-self-approval@sr-e2e.test`, password: PASSWORD })
+        .expect(200);
+      org = { ...org, employeeToken: relogin.body.data.accessToken };
+    });
+
+    it('the requester, even holding service_request:manage, gets 403 resolving their own request', async () => {
+      const created = await createSR(org.employeeToken, org.organizationId, {
+        category: 'IT',
+        title: 'Self-resolve attempt',
+        description: 'placeholder description text',
+      }).expect(201);
+      const id = created.body.data.id;
+
+      await request(app.getHttpServer())
+        .put(`/api/v1/service-requests/${id}/assign`)
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ assignedTo: org.employeeUserId })
+        .expect(200);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/service-requests/${id}/resolve`)
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ resolutionNote: 'Trying to resolve my own request' })
+        .expect(403);
+      expect(res.body.message).toMatch(/yourself/i);
+    });
+
+    it('a DIFFERENT user holding service_request:manage can resolve the same request normally', async () => {
+      const created = await createSR(org.employeeToken, org.organizationId, {
+        category: 'IT',
+        title: 'Resolved by a different user',
+        description: 'placeholder description text',
+      }).expect(201);
+      const id = created.body.data.id;
+
+      await request(app.getHttpServer())
+        .put(`/api/v1/service-requests/${id}/assign`)
+        .set(authed(org.managerToken, org.organizationId))
+        .send({ assignedTo: org.managerUserId })
+        .expect(200);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/service-requests/${id}/resolve`)
+        .set(authed(org.managerToken, org.organizationId))
+        .send({ resolutionNote: 'Resolved normally' })
+        .expect(200);
+      expect(res.body.data.status).toBe('RESOLVED');
+    });
+  });
 });

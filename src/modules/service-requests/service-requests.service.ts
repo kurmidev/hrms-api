@@ -214,6 +214,10 @@ export class ServiceRequestsService {
   ) {
     const sr = await this.getOrThrow(organizationId, id);
 
+    if (currentUser.employeeId && sr.employeeId === currentUser.employeeId) {
+      throw new ForbiddenException('You cannot resolve a service request you raised yourself');
+    }
+
     const canResolve =
       sr.status === ServiceRequestStatus.ASSIGNED || sr.status === ServiceRequestStatus.IN_PROGRESS;
     if (!canResolve) {

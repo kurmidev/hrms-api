@@ -94,10 +94,11 @@ export class LoansController {
   approve(
     @OrganizationId() organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') approverEmployeeId: string,
     @Param('id') id: string,
     @Body() dto: ApproveLoanDto,
   ) {
-    return this.loansService.approve(organizationId, userId, id, dto);
+    return this.loansService.approve(organizationId, userId, approverEmployeeId, id, dto);
   }
 
   @Put(':id/reject')
@@ -109,10 +110,11 @@ export class LoansController {
   reject(
     @OrganizationId() organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') approverEmployeeId: string,
     @Param('id') id: string,
     @Body() dto: RejectLoanDto,
   ) {
-    return this.loansService.reject(organizationId, userId, id, dto);
+    return this.loansService.reject(organizationId, userId, approverEmployeeId, id, dto);
   }
 
   @Get(':id/emi-schedule')

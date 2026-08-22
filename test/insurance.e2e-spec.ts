@@ -15,7 +15,11 @@ import { TransformInterceptor } from '../src/common/interceptors/transform.inter
  *  - Unique-enrollment guard (same employee+policy twice rejected).
  *  - PF/ESI/UAN are referenced from the employee relation, not duplicated.
  *  - Org-scoping across policies + enrollments.
- *  - Permission split: employee:read for GET, employee:update for writes.
+ *  - Permission split: insurance:read for GET, insurance:manage for writes
+ *    (matches @RequirePermissions in insurance.controller.ts / prisma/seed.ts
+ *    PERMISSIONS — NOT employee:read/employee:update, which this file's
+ *    fixture incorrectly granted before the maker-checker regression pass
+ *    caught it; see docs/known-issues.md).
  */
 describe('Insurance module (e2e)', () => {
   let app: INestApplication;
@@ -87,7 +91,13 @@ describe('Insurance module (e2e)', () => {
       data: {
         organizationId: org.id,
         name: `insurance-e2e-admin-${label}`,
-        permissions: ['employee:read', 'employee:update'],
+        // NOTE: the controller (insurance.controller.ts) actually gates on
+        // `insurance:read`/`insurance:manage` (see prisma/seed.ts PERMISSIONS),
+        // NOT `employee:read`/`employee:update` as this fixture previously
+        // granted — every test in this file was silently getting 403 on
+        // createPolicy() before this fix (caught by the maker-checker
+        // regression pass; see docs/known-issues.md).
+        permissions: ['insurance:read', 'insurance:manage'],
         isSystemRole: false,
       },
     });
@@ -95,7 +105,7 @@ describe('Insurance module (e2e)', () => {
       data: {
         organizationId: org.id,
         name: `insurance-e2e-readonly-${label}`,
-        permissions: ['employee:read'],
+        permissions: ['insurance:read'],
         isSystemRole: false,
       },
     });
@@ -146,6 +156,18 @@ describe('Insurance module (e2e)', () => {
       },
     });
     await prisma.userRole.create({ data: { userId: adminUser.id, roleId: adminRole.id } });
+    // eslint-disable-next-line no-console
+    console.log(
+      'DEBUG fixture',
+      label,
+      'org',
+      org.id,
+      'adminRole',
+      adminRole.id,
+      adminRole.permissions,
+      'adminUser',
+      adminUser.id,
+    );
 
     const readOnlyEmployee = await prisma.employee.create({
       data: {
@@ -223,8 +245,11 @@ describe('Insurance module (e2e)', () => {
         type: 'HEALTH',
         coverageAmount: 500000,
         premium: 12000,
-      })
-      .expect(201);
+      });
+    if (res.status !== 201) {
+      // eslint-disable-next-line no-console
+      console.log('DEBUG createPolicy failure', res.status, JSON.stringify(res.body));
+    }
     return res.body.data.id as string;
   }
 
@@ -293,7 +318,7 @@ describe('Insurance module (e2e)', () => {
     });
   });
 
-  describe('Permission split: employee:read (GET) vs employee:update (writes)', () => {
+  describe('Permission split: insurance:read (GET) vs insurance:manage (writes)', () => {
     let org: OrgFixture;
     let policyId: string;
 
@@ -384,6 +409,99 @@ describe('Insurance module (e2e)', () => {
         .set(authed(orgB.adminToken, orgB.organizationId))
         .expect(200);
       expect(res.body.data.data.find((e: any) => e.id === enrollmentId)).toBeUndefined();
+    });
+  });
+
+  // ─── MAKER-CHECKER: SELF-APPROVAL GUARD (hrms-backend.md §26) ─────────────
+
+  describe('Maker-checker: self-approval guard', () => {
+    let org: OrgFixture;
+    let secondAdminToken: string;
+    let policyId: string;
+
+    beforeAll(async () => {
+      org = await createOrgFixture('self-approval');
+      policyId = await createPolicy(org);
+
+      // A second admin (insurance:manage) who is NOT the enrollment's subject,
+      // to prove the guard blocks only self-approval, not approval in general.
+      const adminRole = await prisma.role.findFirstOrThrow({
+        where: { organizationId: org.organizationId, name: 'insurance-e2e-admin-self-approval' },
+      });
+      const dept = await prisma.department.findFirstOrThrow({
+        where: { organizationId: org.organizationId },
+      });
+      const designation = await prisma.designation.findFirstOrThrow({
+        where: { organizationId: org.organizationId },
+      });
+      const passwordHash = await bcrypt.hash(PASSWORD, 10);
+      const secondAdminEmployee = await prisma.employee.create({
+        data: {
+          organizationId: org.organizationId,
+          empCode: 'ADM2-self-approval',
+          firstName: 'SecondAdmin',
+          lastName: 'self-approval',
+          phone: '9300000099',
+          departmentId: dept.id,
+          designationId: designation.id,
+          status: 'ACTIVE',
+        },
+      });
+      const secondAdminUser = await prisma.user.create({
+        data: {
+          organizationId: org.organizationId,
+          employeeId: secondAdminEmployee.id,
+          email: 'admin2-self-approval@insurance-e2e.test',
+          passwordHash,
+          isActive: true,
+        },
+      });
+      await prisma.userRole.create({
+        data: { userId: secondAdminUser.id, roleId: adminRole.id },
+      });
+      const login = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: secondAdminUser.email, password: PASSWORD })
+        .expect(200);
+      secondAdminToken = login.body.data.accessToken;
+    });
+
+    it('an admin (insurance:manage), even self, gets 403 approving their OWN insurance enrollment', async () => {
+      // org.adminToken's employee IS org.adminToken's own record here — enroll
+      // the admin's own employee (self-service enrollment), then self-approve.
+      const adminEmployee = await prisma.employee.findFirstOrThrow({
+        where: { organizationId: org.organizationId, empCode: 'ADM-self-approval' },
+      });
+      const enrollRes = await request(app.getHttpServer())
+        .post('/api/v1/insurance/enroll')
+        .set(authed(org.adminToken, org.organizationId))
+        .send({ employeeId: adminEmployee.id, policyId })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/insurance/enrollments/${enrollRes.body.data.id}/approve`)
+        .set(authed(org.adminToken, org.organizationId))
+        .send({ approvalStatus: 'APPROVED' })
+        .expect(403);
+      expect(res.body.message).toMatch(/own/i);
+    });
+
+    it('a DIFFERENT admin holding insurance:manage can approve the same enrollment normally', async () => {
+      const adminEmployee = await prisma.employee.findFirstOrThrow({
+        where: { organizationId: org.organizationId, empCode: 'ADM-self-approval' },
+      });
+      const enrollRes = await request(app.getHttpServer())
+        .post('/api/v1/insurance/enroll')
+        .set(authed(org.adminToken, org.organizationId))
+        .send({ employeeId: adminEmployee.id, policyId: await createPolicy(org, 'Second Policy') })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/insurance/enrollments/${enrollRes.body.data.id}/approve`)
+        .set(authed(secondAdminToken, org.organizationId))
+        .send({ approvalStatus: 'APPROVED' })
+        .expect(200);
+      expect(res.body.data.approvalStatus).toBe('APPROVED');
     });
   });
 });

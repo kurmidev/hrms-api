@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '@common/dto/pagination.dto';
@@ -191,10 +196,14 @@ export class InsuranceService {
   async approveEnrollment(
     organizationId: string,
     userId: string,
+    approverEmployeeId: string | null,
     id: string,
     dto: ApproveEnrollmentDto,
   ) {
-    await this.getEnrollmentOrThrow(organizationId, id);
+    const enrollment = await this.getEnrollmentOrThrow(organizationId, id);
+    if (approverEmployeeId && enrollment.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot approve or reject your own insurance enrollment');
+    }
 
     const updated = await this.prisma.employeeInsurance.update({
       where: { id },

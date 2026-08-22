@@ -178,6 +178,9 @@ export class TodosService {
     }
 
     const todo = await this.getTodoOrThrow(organizationId, id);
+    if (currentUser.employeeId && todo.employeeId === currentUser.employeeId) {
+      throw new ForbiddenException('You cannot approve or reject your own todo');
+    }
     if (todo.status !== TodoStatus.SUBMITTED) {
       throw new BadRequestException('Only a SUBMITTED todo can be approved or rejected');
     }

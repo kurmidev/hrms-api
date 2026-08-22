@@ -418,6 +418,75 @@ describe('Loans module (e2e)', () => {
     });
   });
 
+  // ─── Maker-checker: self-approval guard (hrms-backend.md §26) ───────────────
+
+  describe('Maker-checker: self-approval guard', () => {
+    let org: OrgFixture;
+
+    beforeAll(async () => {
+      org = await createOrgFixture('self-approval');
+      // Grant the applicant's own user the SAME approve permission the
+      // approver holds, to prove the guard fires on identity, not permission.
+      const approverRole = await prisma.role.findFirstOrThrow({
+        where: { organizationId: org.organizationId, name: 'loans-e2e-approver-self-approval' },
+      });
+      await prisma.userRole.create({
+        data: { userId: org.employeeUserId, roleId: approverRole.id },
+      });
+      // Re-login to pick up the newly-flattened permission in the JWT.
+      const relogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: `employee-self-approval@loans-e2e.test`, password: PASSWORD })
+        .expect(200);
+      org = { ...org, employeeToken: relogin.body.data.accessToken };
+    });
+
+    it('the applicant, even holding loan:approve, gets 403 approving their own loan', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/loans')
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ amountRequested: 8000, tenureMonths: 4 })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/loans/${created.body.data.id}/approve`)
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ interestRate: 10 })
+        .expect(403);
+      expect(res.body.message).toMatch(/own/i);
+    });
+
+    it('the applicant, even holding loan:approve, gets 403 rejecting their own loan', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/loans')
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ amountRequested: 3000, tenureMonths: 2 })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/loans/${created.body.data.id}/reject`)
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ reason: 'Self reject attempt' })
+        .expect(403);
+      expect(res.body.message).toMatch(/own/i);
+    });
+
+    it('a DIFFERENT user holding loan:approve can approve the same applicant loan normally', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/loans')
+        .set(authed(org.employeeToken, org.organizationId))
+        .send({ amountRequested: 5000, tenureMonths: 5 })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/loans/${created.body.data.id}/approve`)
+        .set(authed(org.approverToken, org.organizationId))
+        .send({ interestRate: 8 })
+        .expect(200);
+      expect(res.body.data.status).toBe('ACTIVE');
+    });
+  });
+
   // ─── THE PAYROLL INTEGRATION ─────────────────────────────────────────────────
 
   describe('Payroll <-> Loans integration', () => {

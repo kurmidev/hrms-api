@@ -147,10 +147,17 @@ export class LeaveController {
   approve(
     @OrganizationId() organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') approverEmployeeId: string,
     @Param('id') id: string,
     @Body() dto: ApproveLeaveDto,
   ) {
-    return this.leaveApplicationsService.approve(organizationId, id, userId, dto);
+    return this.leaveApplicationsService.approve(
+      organizationId,
+      id,
+      userId,
+      approverEmployeeId,
+      dto,
+    );
   }
 
   @Put(':id/reject')
@@ -161,10 +168,17 @@ export class LeaveController {
   reject(
     @OrganizationId() organizationId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('employeeId') approverEmployeeId: string,
     @Param('id') id: string,
     @Body() dto: RejectLeaveDto,
   ) {
-    return this.leaveApplicationsService.reject(organizationId, id, userId, dto);
+    return this.leaveApplicationsService.reject(
+      organizationId,
+      id,
+      userId,
+      approverEmployeeId,
+      dto,
+    );
   }
 
   // ─── Holidays ─────────────────────────────────────────────────────────────

@@ -1,0 +1,290 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import * as request from 'supertest';
+import * as bcrypt from 'bcryptjs';
+import { v4 as uuid } from 'uuid';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
+
+/**
+ * Leave module maker-checker regression (hrms-backend.md §26):
+ *  - A leave applicant who ALSO holds `leave:approve` must still be blocked
+ *    (403) from approving/rejecting their OWN leave application.
+ *  - A DIFFERENT user holding `leave:approve` must still be able to
+ *    approve/reject normally — the guard blocks only self-approval.
+ *
+ * Runs against the real dev MySQL/Redis instance (same as `npm run start:dev`).
+ */
+describe('Leave module — maker-checker self-approval guard (e2e)', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+
+  const PASSWORD = 'Test@1234';
+  const createdOrgIds: string[] = [];
+
+  beforeAll(async () => {
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleRef.createNestApplication();
+    app.setGlobalPrefix('api/v1');
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
+    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalInterceptors(new TransformInterceptor());
+    await app.init();
+
+    prisma = app.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    for (const organizationId of createdOrgIds) {
+      const employees = await prisma.employee.findMany({
+        where: { organizationId },
+        select: { id: true },
+      });
+      const employeeIds = employees.map((e) => e.id);
+
+      await prisma.leaveApplication.deleteMany({ where: { employeeId: { in: employeeIds } } });
+      await prisma.leaveBalance.deleteMany({ where: { employeeId: { in: employeeIds } } });
+      await prisma.leavePolicy.deleteMany({ where: { organizationId } });
+      await prisma.userRole.deleteMany({ where: { user: { organizationId } } });
+      await prisma.loginHistory.deleteMany({ where: { user: { organizationId } } });
+      await prisma.user.deleteMany({ where: { organizationId } });
+      await prisma.employee.deleteMany({ where: { organizationId } });
+      await prisma.designation.deleteMany({ where: { organizationId } });
+      await prisma.department.deleteMany({ where: { organizationId } });
+      await prisma.role.deleteMany({ where: { organizationId } });
+      await prisma.organization.deleteMany({ where: { id: organizationId } });
+    }
+    await app.close();
+  });
+
+  interface OrgFixture {
+    organizationId: string;
+    leavePolicyId: string;
+    approverToken: string;
+    applicantUserId: string;
+    applicantEmail: string;
+    applicantId: string;
+    applicantToken: string;
+  }
+
+  async function createOrgFixture(label: string): Promise<OrgFixture> {
+    const slug = `leave-e2e-${label}-${uuid()}`;
+    const org = await prisma.organization.create({
+      data: { name: `Leave E2E ${label}`, slug, isActive: true },
+    });
+    createdOrgIds.push(org.id);
+
+    const approverRole = await prisma.role.create({
+      data: {
+        organizationId: org.id,
+        name: `leave-e2e-approver-${label}`,
+        description: 'Test approver role',
+        permissions: ['leave:read', 'leave:apply', 'leave:approve'],
+        isSystemRole: false,
+      },
+    });
+
+    const applicantRole = await prisma.role.create({
+      data: {
+        organizationId: org.id,
+        name: `leave-e2e-applicant-${label}`,
+        description: 'Test applicant role',
+        permissions: ['leave:read', 'leave:apply'],
+        isSystemRole: false,
+      },
+    });
+
+    const department = await prisma.department.create({
+      data: { organizationId: org.id, name: `Dept ${label}` },
+    });
+    const designation = await prisma.designation.create({
+      data: { organizationId: org.id, departmentId: department.id, name: `Designation ${label}` },
+    });
+
+    const leavePolicy = await prisma.leavePolicy.create({
+      data: {
+        organizationId: org.id,
+        name: `Casual Leave ${label}`,
+        leaveType: 'CASUAL',
+        daysPerYear: 12,
+      },
+    });
+
+    const passwordHash = await bcrypt.hash(PASSWORD, 10);
+
+    const approverEmployee = await prisma.employee.create({
+      data: {
+        organizationId: org.id,
+        empCode: `APR-${label}`,
+        firstName: 'Approver',
+        lastName: label,
+        phone: '9200000001',
+        departmentId: department.id,
+        designationId: designation.id,
+        status: 'ACTIVE',
+      },
+    });
+    const approverUser = await prisma.user.create({
+      data: {
+        organizationId: org.id,
+        employeeId: approverEmployee.id,
+        email: `approver-${label}@leave-e2e.test`,
+        passwordHash,
+        isActive: true,
+      },
+    });
+    await prisma.userRole.create({ data: { userId: approverUser.id, roleId: approverRole.id } });
+
+    const applicant = await prisma.employee.create({
+      data: {
+        organizationId: org.id,
+        empCode: `APL-${label}`,
+        firstName: 'Applicant',
+        lastName: label,
+        phone: '9200000002',
+        departmentId: department.id,
+        designationId: designation.id,
+        status: 'ACTIVE',
+      },
+    });
+    const applicantEmail = `applicant-${label}@leave-e2e.test`;
+    const applicantUser = await prisma.user.create({
+      data: {
+        organizationId: org.id,
+        employeeId: applicant.id,
+        email: applicantEmail,
+        passwordHash,
+        isActive: true,
+      },
+    });
+    await prisma.userRole.create({ data: { userId: applicantUser.id, roleId: applicantRole.id } });
+
+    const currentYear = new Date().getFullYear();
+    await prisma.leaveBalance.create({
+      data: {
+        employeeId: applicant.id,
+        leavePolicyId: leavePolicy.id,
+        year: currentYear,
+        entitledDays: 12,
+        balanceDays: 12,
+      },
+    });
+    await prisma.leaveBalance.create({
+      data: {
+        employeeId: approverEmployee.id,
+        leavePolicyId: leavePolicy.id,
+        year: currentYear,
+        entitledDays: 12,
+        balanceDays: 12,
+      },
+    });
+
+    const approverLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: approverUser.email, password: PASSWORD })
+      .expect(200);
+    const applicantLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: applicantEmail, password: PASSWORD })
+      .expect(200);
+
+    return {
+      organizationId: org.id,
+      leavePolicyId: leavePolicy.id,
+      approverToken: approverLogin.body.data.accessToken,
+      applicantUserId: applicantUser.id,
+      applicantEmail,
+      applicantId: applicant.id,
+      applicantToken: applicantLogin.body.data.accessToken,
+    };
+  }
+
+  function authed(token: string, organizationId: string) {
+    return {
+      Authorization: `Bearer ${token}`,
+      'X-Organization-ID': organizationId,
+    };
+  }
+
+  async function applyLeave(org: OrgFixture, days: number, date: string) {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/leave/apply')
+      .set(authed(org.applicantToken, org.organizationId))
+      .send({
+        leavePolicyId: org.leavePolicyId,
+        fromDate: date,
+        toDate: date,
+        days,
+        reason: 'Personal',
+      })
+      .expect(201);
+    return res.body.data.id as string;
+  }
+
+  describe('Maker-checker: self-approval guard', () => {
+    let org: OrgFixture;
+
+    beforeAll(async () => {
+      org = await createOrgFixture('self-approval');
+
+      // Grant the applicant's own user leave:approve too, then re-login to
+      // pick up the newly-flattened permission in the JWT.
+      const approverRole = await prisma.role.findFirstOrThrow({
+        where: { organizationId: org.organizationId, name: 'leave-e2e-approver-self-approval' },
+      });
+      await prisma.userRole.create({
+        data: { userId: org.applicantUserId, roleId: approverRole.id },
+      });
+      const relogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: org.applicantEmail, password: PASSWORD })
+        .expect(200);
+      org = { ...org, applicantToken: relogin.body.data.accessToken };
+    });
+
+    it('the applicant, even holding leave:approve, gets 403 approving their own leave application', async () => {
+      const id = await applyLeave(org, 1, '2026-09-01');
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/leave/${id}/approve`)
+        .set(authed(org.applicantToken, org.organizationId))
+        .send({ notes: 'Self approve attempt' })
+        .expect(403);
+      expect(res.body.message).toMatch(/own/i);
+    });
+
+    it('the applicant, even holding leave:approve, gets 403 rejecting their own leave application', async () => {
+      const id = await applyLeave(org, 1, '2026-09-03');
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/leave/${id}/reject`)
+        .set(authed(org.applicantToken, org.organizationId))
+        .send({ rejectionNote: 'Self reject attempt' })
+        .expect(403);
+      expect(res.body.message).toMatch(/own/i);
+    });
+
+    it('a DIFFERENT user holding leave:approve can approve the same applicant leave normally', async () => {
+      const id = await applyLeave(org, 1, '2026-09-05');
+
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/leave/${id}/approve`)
+        .set(authed(org.approverToken, org.organizationId))
+        .send({ notes: 'Approved by a different user' })
+        .expect(200);
+      expect(res.body.data.status).toBe('APPROVED');
+    });
+  });
+});

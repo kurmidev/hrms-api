@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '@common/dto/pagination.dto';
@@ -81,8 +86,18 @@ export class IncentiveLedgerService {
     );
   }
 
-  async release(organizationId: string, userId: string, id: string, dto: ReleaseIncentiveDto) {
+  async release(
+    organizationId: string,
+    userId: string,
+    approverEmployeeId: string | null,
+    id: string,
+    dto: ReleaseIncentiveDto,
+  ) {
     const entry = await this.getEntryOrThrow(organizationId, id);
+
+    if (approverEmployeeId && entry.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot release your own incentive ledger entry');
+    }
 
     if (!entry.isHeld || entry.isReleased || entry.isDeducted) {
       throw new BadRequestException(

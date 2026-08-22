@@ -52,19 +52,44 @@ export class AuthService {
     // source — the latter is `null` for any user with no linked Employee row
     // (e.g. the seeded super_admin account), which previously broke every
     // `@CurrentUser('organizationId')`-scoped endpoint for that account.
-    const user = await this.prisma.user.findFirst({
+    //
+    // CRITICAL: `User.email` is unique only PER ORGANIZATION
+    // (`@@unique([organizationId, email])`), by design — the same email may
+    // legitimately exist in two different orgs (two separate tenants each
+    // onboarding an employee with the same address). `LoginDto` has no
+    // organizationId field (the frontend cannot know the org before it
+    // authenticates), so this lookup can return MULTIPLE rows across
+    // different orgs. Using `findFirst` here previously picked an arbitrary
+    // one (DB engine/index order) and compared the submitted password against
+    // ONLY that row — so a real, correctly-passworded user in org B could get
+    // a false "Invalid email or password" (or, worse, a *different* org's
+    // stale/matching row could authenticate) whenever an email collided
+    // across orgs, entirely nondeterministic and silent. Fixed: fetch ALL
+    // matching rows and bcrypt-compare against each until one matches, so the
+    // correct tenant's user always wins regardless of row order. True
+    // ambiguity (same email AND same password hash match in two orgs) is a
+    // residual, inherent limit of email+password-only login with no org
+    // selector — out of scope here, flagged in known-issues.md.
+    const candidates = await this.prisma.user.findMany({
       where: { email, isActive: true },
       include: { employee: { select: { organizationId: true } } },
     });
 
-    if (!user) {
+    if (candidates.length === 0) {
       await this.redis.incr(failKey, 15 * 60);
       return null;
     }
 
-    const match = await bcrypt.compare(password, user.passwordHash);
+    let user: (typeof candidates)[number] | null = null;
+    for (const candidate of candidates) {
+      // eslint-disable-next-line no-await-in-loop
+      if (await bcrypt.compare(password, candidate.passwordHash)) {
+        user = candidate;
+        break;
+      }
+    }
 
-    if (!match) {
+    if (!user) {
       const attempts = await this.redis.incr(failKey, 15 * 60);
       if (attempts >= 5) {
         await this.redis.set(lockKey, '1', 15 * 60);
@@ -90,6 +115,13 @@ export class AuthService {
     });
 
     if (!user) throw new UnauthorizedException('User not found');
+
+    // Lightweight, non-sensitive branding metadata every authenticated user
+    // needs regardless of `org:read` — see tenant-logo-branding module plan.
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true, logoUrl: true },
+    });
 
     const tokens = await this.generateTokens(user.id, user.email, organizationId);
 
@@ -119,6 +151,8 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         organizationId,
+        organizationName: org?.name ?? null,
+        organizationLogoUrl: org?.logoUrl ?? null,
         mustChangePassword: user.mustChangePassword,
         permissions: [...new Set(permissions)],
         employee: user.employee
@@ -244,6 +278,13 @@ export class AuthService {
     });
     if (!user) throw new NotFoundException('User not found');
 
+    // Lightweight, non-sensitive branding metadata every authenticated user
+    // needs regardless of `org:read` — see tenant-logo-branding module plan.
+    const org = await this.prisma.organization.findUnique({
+      where: { id: user.organizationId },
+      select: { name: true, logoUrl: true },
+    });
+
     const permissions = user.userRoles.flatMap((ur) => (ur.role.permissions as string[]) || []);
     // `roles` is part of the documented `AuthUserDto` shape and the frontend's
     // `AuthUser` type (`ProfilePage.tsx` reads `user.roles[0]?.name`) — it was
@@ -261,6 +302,8 @@ export class AuthService {
       // `user.employee?.organizationId`, which is `null` for any user with no
       // linked Employee row (e.g. the seeded super_admin account).
       organizationId: user.organizationId,
+      organizationName: org?.name ?? null,
+      organizationLogoUrl: org?.logoUrl ?? null,
       mustChangePassword: user.mustChangePassword,
       permissions: [...new Set(permissions)],
       roles,

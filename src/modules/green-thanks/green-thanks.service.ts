@@ -161,6 +161,15 @@ export class GreenThanksService {
     }
 
     const entry = await this.getEntryOrThrow(organizationId, id);
+    if (
+      currentUser.employeeId &&
+      (entry.fromEmployeeId === currentUser.employeeId ||
+        entry.toEmployeeId === currentUser.employeeId)
+    ) {
+      throw new ForbiddenException(
+        'You cannot approve or reject a Green Thanks entry you sent or received',
+      );
+    }
     if (entry.status !== 'pending') {
       throw new BadRequestException(
         'Only a pending Green Thanks entry can be approved or rejected',

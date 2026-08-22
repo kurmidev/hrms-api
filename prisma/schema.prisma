@@ -833,7 +833,13 @@ model AttendanceLog {
   totalHours           Float?
   overtimeHours        Float?
   approvedBy           String?
-  notes                String?
+  // @db.Text: requestCorrection() JSON-encodes {type, reason, requestedCheckIn,
+  // requestedCheckOut, requestedAt, requestedBy} into this column — a plain
+  // VARCHAR(191) (Prisma's String default) silently truncates/errors on any
+  // reason longer than a few words (the JSON envelope alone is ~140 chars
+  // before the reason text). Caught by the attendance maker-checker e2e
+  // regression; see docs/known-issues.md.
+  notes                String?          @db.Text
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   createdById          String?

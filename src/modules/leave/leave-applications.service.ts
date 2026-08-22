@@ -165,11 +165,20 @@ export class LeaveApplicationsService {
     return paginate(data, total, query);
   }
 
-  async approve(organizationId: string, id: string, approverId: string, dto: ApproveLeaveDto) {
+  async approve(
+    organizationId: string,
+    id: string,
+    approverId: string,
+    approverEmployeeId: string | null,
+    dto: ApproveLeaveDto,
+  ) {
     const application = await this.prisma.leaveApplication.findFirst({
       where: { id, employee: { organizationId, deletedAt: null } },
     });
     if (!application) throw new NotFoundException('Leave application not found');
+    if (approverEmployeeId && application.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot approve your own leave application');
+    }
     if (application.status !== LeaveStatus.PENDING) {
       throw new BadRequestException('Only pending leave applications can be approved');
     }
@@ -193,11 +202,20 @@ export class LeaveApplicationsService {
     });
   }
 
-  async reject(organizationId: string, id: string, approverId: string, dto: RejectLeaveDto) {
+  async reject(
+    organizationId: string,
+    id: string,
+    approverId: string,
+    approverEmployeeId: string | null,
+    dto: RejectLeaveDto,
+  ) {
     const application = await this.prisma.leaveApplication.findFirst({
       where: { id, employee: { organizationId, deletedAt: null } },
     });
     if (!application) throw new NotFoundException('Leave application not found');
+    if (approverEmployeeId && application.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot reject your own leave application');
+    }
     if (application.status !== LeaveStatus.PENDING) {
       throw new BadRequestException('Only pending leave applications can be rejected');
     }

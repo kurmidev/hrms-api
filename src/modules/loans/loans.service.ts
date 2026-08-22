@@ -126,8 +126,17 @@ export class LoansService {
     return this.toLoanResponse(loan);
   }
 
-  async approve(organizationId: string, userId: string, id: string, dto: ApproveLoanDto) {
+  async approve(
+    organizationId: string,
+    userId: string,
+    approverEmployeeId: string | null,
+    id: string,
+    dto: ApproveLoanDto,
+  ) {
     const loan = await this.getLoanOrThrow(organizationId, id);
+    if (approverEmployeeId && loan.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot approve your own loan application');
+    }
     if (loan.status !== LoanStatus.PENDING) {
       throw new BadRequestException('Only a PENDING loan application can be approved');
     }
@@ -191,8 +200,17 @@ export class LoansService {
     };
   }
 
-  async reject(organizationId: string, userId: string, id: string, dto: RejectLoanDto) {
+  async reject(
+    organizationId: string,
+    userId: string,
+    approverEmployeeId: string | null,
+    id: string,
+    dto: RejectLoanDto,
+  ) {
     const loan = await this.getLoanOrThrow(organizationId, id);
+    if (approverEmployeeId && loan.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot reject your own loan application');
+    }
     if (loan.status !== LoanStatus.PENDING) {
       throw new BadRequestException('Only a PENDING loan application can be rejected');
     }

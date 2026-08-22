@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -321,11 +322,15 @@ export class AttendanceService {
     id: string,
     dto: ApproveCorrectionDto,
     approverUserId: string,
+    approverEmployeeId: string | null,
   ) {
     const log = await this.prisma.attendanceLog.findFirst({
       where: { id, employee: { organizationId, deletedAt: null } },
     });
     if (!log) throw new NotFoundException('Attendance log not found');
+    if (approverEmployeeId && log.employeeId === approverEmployeeId) {
+      throw new ForbiddenException('You cannot approve your own attendance correction request');
+    }
 
     const checkInAt = dto.checkInAt ? new Date(dto.checkInAt) : log.checkInAt;
     const checkOutAt = dto.checkOutAt ? new Date(dto.checkOutAt) : log.checkOutAt;
